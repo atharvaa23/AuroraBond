@@ -38,9 +38,9 @@ export const DEFAULT_STORY: StoryEvent[] = [
 ];
 
 export const DEFAULT_MESSAGES: Message[] = [
-  { id: 1, sender: "partner", text: "Hey love 💜 I miss you so much today",              time: "10:23 AM" },
-  { id: 2, sender: "me",      text: "I know, I've been thinking of you all morning 🌸",  time: "10:25 AM" },
-  { id: 3, sender: "partner", text: "Not long until we're together again ✨",             time: "10:26 AM" },
+  { id: "1", sender: "partner", text: "Hey love 💜 I miss you so much today",             createdAt: null},
+  { id: "2", sender: "me",      text: "I know, I've been thinking of you all morning 🌸",  createdAt: null},
+  { id: "3", sender: "partner", text: "Not long until we're together again ✨",             createdAt: null },
 ];
 
 // ─── Navigation Definitions ────────────────────────────────────────────────
