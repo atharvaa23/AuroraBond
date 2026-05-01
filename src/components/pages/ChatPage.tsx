@@ -1,7 +1,6 @@
 "use client";
 import type { Timestamp } from "firebase/firestore";
 import { useState, useRef, useEffect } from "react";
-import type { User, Partner } from "../../lib/types";
 import {
   collection,
   query,
@@ -11,12 +10,15 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-
+import type { User, Partner, Bond } from "../../lib/types";
 import { PetalCanvas } from "../ui/PetalCanvas";
 
+
+
 interface ChatPageProps {
-  user: (User & { bondId?: string }) | null;
-  partner: Partner | null;
+  user: (User & { bondId?: string; uid?: string }) | null;
+  partner: (Partner & { uid?: string }) | null;
+  bond: Bond | null;
 }
 
 const CHAT_CSS = `
@@ -78,12 +80,14 @@ export interface Message {
   text: string;
   createdAt: Timestamp | null;
 }
-export function ChatPage({ user, partner }: ChatPageProps) {
+export function ChatPage({ user, partner, bond }: ChatPageProps) {
   
   const [draft, setDraft] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const bondId = user?.bondId;
+  const partnerDisplayNickname =
+  bond?.nicknames?.[partner?.uid || ""] || partner?.nickname || "Partner";
 
  useEffect(() => {
   if (!bondId) return;
@@ -195,7 +199,7 @@ if (!bondId) {
           }}
         >
           <span>{partner?.avatar ?? "🌸"}</span>
-          {partner?.nickname ?? "Partner"}
+          {partnerDisplayNickname}
         </div>
       )}
 

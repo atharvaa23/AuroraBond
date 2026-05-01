@@ -11,7 +11,10 @@ import {
   where,
   getDocs,
   updateDoc,
+  serverTimestamp
+  
 } from "firebase/firestore";
+
 
 import { auth, db } from "@/lib/firebase";
 import type { PageKey, User, Partner } from "../../lib/types";
@@ -49,7 +52,67 @@ const LOGIN_CSS = `
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .login-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 36px; }
-  .mode-toggle { display: flex; gap: 8px; margin-bottom: 28px; justify-content: center; }
+  .mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 28px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.mode-toggle-btn {
+  position: relative;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: transparent;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.mode-toggle-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.05);
+}
+
+.mode-toggle-btn.active {
+  color: white;
+  background: linear-gradient(135deg, var(--aurora1), var(--aurora3));
+  box-shadow:
+    0 0 22px rgba(192,132,252,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.mode-toggle-btn.active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.22),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: modeShine 1.8s ease infinite;
+}
+
+@keyframes modeShine {
+  0% { transform: translateX(-100%); }
+  70%, 100% { transform: translateX(100%); }
+}
   .bond-code {
     background: rgba(192,132,252,0.1);
     border: 1px solid var(--aurora1);
@@ -93,90 +156,114 @@ export function LoginPage({ setPage, setUser, setPartner }: LoginPageProps) {
   const [nickname, setNickname] = useState("");
   const [partnerCode, setPartnerCode] = useState("");
   const [avatar, setAvatar] = useState("💜");
-  const [code] = useState(generateCode);
-
+  const [code] = useState(() => generateCode());
+  
   const handleGoogleLogin = async () => {
   try {
     const provider = new GoogleAuthProvider();
-
     const result = await signInWithPopup(auth, provider);
-
     const firebaseUser = result.user;
+
+    const userRef = doc(db, "users", firebaseUser.uid);
 
     const user: User = {
       name: name || firebaseUser.displayName || "Unknown",
       nickname: nickname || firebaseUser.displayName || "Unknown",
       avatar,
       code,
+      email: firebaseUser.email || "",
+      bondId: "",
+      online: true,
+      lastSeen: null,
+      createdAt: null,
     };
 
-  const userRef = doc(db, "users", firebaseUser.uid);
+    let bondId = "";
 
-await setDoc(
-  userRef,
-  user,
-  { merge: true }
-);
+    if (mode === "create") {
+      const bondRef = await addDoc(collection(db, "bonds"), {
+  user1Uid: firebaseUser.uid,
+  user2Uid: null,
+  reunionDate: "",
+  quote1: "",
+  quote2: "",
+  user1PartnerNickname: "",
+  user2PartnerNickname: "",
+  createdAt: serverTimestamp(),
+  code,
+});
 
-let bondId = "";
-
-if (mode === "create") {
-
-  // CREATE NEW BOND
-
-  const bondRef = await addDoc(collection(db, "bonds"), {
-    user1Uid: firebaseUser.uid,
-    user2Uid: null,
-    reunionDate: "",
-    createdAt: Date.now(),
-    code,
-  });
-
-  bondId = bondRef.id;
-
-} else {
-
-  // JOIN EXISTING BOND
-
-  const q = query(
-    collection(db, "bonds"),
-    where("code", "==", partnerCode)
-  );
-
-  const snapshot = await getDocs(q);
-
-  if (snapshot.empty) {
-    alert("Invalid bond code");
-    return;
-  }
-
-  const bondDoc = snapshot.docs[0];
-
-  bondId = bondDoc.id;
-  const bondData = bondDoc.data();
-
-if (bondData.user2Uid) {
-  alert("This bond is already connected.");
+      bondId = bondRef.id;
+    } else {
+      if (!partnerCode.trim()) {
+  alert("Enter bond code");
   return;
 }
+      const q = query(
+        collection(db, "bonds"),
+        where("code", "==", partnerCode.trim().toUpperCase())
+      );
 
-  await updateDoc(
-    doc(db, "bonds", bondId),
-    {
-      user2Uid: firebaseUser.uid,
+      const snapshot = await getDocs(q);
+
+      
+
+if (snapshot.empty) {
+        alert("Invalid bond code");
+        return;
+      }
+
+      const bondDoc = snapshot.docs[0];
+      const bondData = bondDoc.data();
+
+      if (bondData.user2Uid) {
+        alert("This bond is already connected.");
+        return;
+      }
+
+      bondId = bondDoc.id;
+
+      await updateDoc(doc(db, "bonds", bondId), {
+        user2Uid: firebaseUser.uid,
+      });
     }
-  );
-}
 
-await setDoc(
-  userRef,
-  {
-    bondId,
-  },
-  { merge: true }
+    await setDoc(
+      userRef,
+      {
+        ...user,
+        bondId,
+        online: true,
+        lastSeen: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    setUser({
+      ...user,
+      bondId,
+    });
+  const bondSnap = await getDocs(
+  query(collection(db, "bonds"), where("__name__", "==", bondId))
 );
-    setUser(user);
 
+const bond = bondSnap.docs[0]?.data();
+
+const partnerUid =
+  bond?.user1Uid === firebaseUser.uid
+    ? bond?.user2Uid
+    : bond?.user1Uid;
+
+if (partnerUid) {
+  const partnerDoc = await getDocs(
+    query(collection(db, "users"), where("__name__", "==", partnerUid))
+  );
+
+  if (!partnerDoc.empty) {
+    setPartner(partnerDoc.docs[0].data() as Partner);
+  }
+}
     setPage("dashboard");
   } catch (err) {
     console.error(err);
@@ -200,10 +287,10 @@ await setDoc(
               {(["login", "create"] as Mode[]).map((m) => (
                 <button
                   key={m}
-                  className={`nav-btn ${mode === m ? "active" : ""}`}
+                  className={`mode-toggle-btn ${mode === m ? "active" : ""}`}
                   onClick={() => setMode(m)}
                 >
-                  {m === "login" ? "Sign In" : "Create Bond"}
+                  {m === "login" ? "Join Bond" : "Create Bond"}
                 </button>
               ))}
             </div>
@@ -258,7 +345,7 @@ await setDoc(
             {/* Partner code (login mode) */}
             {mode === "login" && (
               <div className="input-wrap">
-                <label className="input-label">Partner Bond Code (optional)</label>
+                <label className="input-label">Partner Bond Code</label>
                 <input
                   className="input-field"
                   placeholder="Enter partner's code"
@@ -273,12 +360,12 @@ await setDoc(
               style={{ width: "100%", marginTop: 8 }}
               onClick={handleGoogleLogin}
             >
-              {mode === "login" ? "Enter Our Universe →" : "Create Our Bond →"}
+              {mode === "login" ? "Join Bond →" : "Create Bond →"}
             </button>
 
             <div className="divider">
               <div className="divider-line" />
-              <span className="divider-text">OR</span>
+              <span className="divider-text">💜</span>
               <div className="divider-line" />
             </div>
 

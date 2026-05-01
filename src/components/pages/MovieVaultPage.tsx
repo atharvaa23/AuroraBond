@@ -1,10 +1,18 @@
 "use client";
-
-import { useState } from "react";
-import type { Movie } from "../../lib/types";
-import { DEFAULT_MOVIES } from "../../lib/constants";
-import { useStorage } from "../../lib/hooks";
 import { PetalCanvas } from "../ui/PetalCanvas";
+import { useEffect, useState } from "react";
+import type { Movie, User } from "../../lib/types";
+import {
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const MOVIE_CSS = `
   .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
@@ -39,6 +47,7 @@ function AddMovieModal({ onAdd, onClose }: AddMovieModalProps) {
     if (!form.title.trim()) return;
     onAdd(form);
   };
+  
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -76,9 +85,9 @@ function AddMovieModal({ onAdd, onClose }: AddMovieModalProps) {
 
 interface MovieCardProps {
   movie: Movie;
-  onToggleWatched: (id: number) => void;
-  onSetRating: (id: number, rating: number) => void;
-  onRemove: (id: number) => void;
+ onToggleWatched: (id: string) => void;
+onSetRating: (id: string, rating: number) => void;
+onRemove: (id: string) => void;
 }
 
 function MovieCardComponent({ movie, onToggleWatched, onSetRating, onRemove }: MovieCardProps) {
@@ -131,20 +140,72 @@ function MovieCardComponent({ movie, onToggleWatched, onSetRating, onRemove }: M
  * Firebase-ready: swap useStorage for a Firestore collection keyed to bond ID.
  * Ratings + watched status sync in real-time for both partners.
  */
-export function MovieVaultPage() {
-  const [movies, setMovies] = useStorage<Movie[]>("ab_movies", DEFAULT_MOVIES);
+interface MovieVaultPageProps {
+  user: User | null;
+}
+
+export function MovieVaultPage({ user }: MovieVaultPageProps) {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const bondId = user?.bondId;
   const [showAdd, setShowAdd] = useState(false);
 
-  const addMovie = (data: Omit<Movie, "id" | "watched" | "rating">) => {
-    setMovies([...movies, { ...data, id: Date.now(), watched: false, rating: 0 }]);
-    setShowAdd(false);
-  };
-  const toggleWatched = (id: number) =>
-    setMovies(movies.map((m) => (m.id === id ? { ...m, watched: !m.watched } : m)));
-  const setRating = (id: number, rating: number) =>
-    setMovies(movies.map((m) => (m.id === id ? { ...m, rating } : m)));
-  const removeMovie = (id: number) =>
-    setMovies(movies.filter((m) => m.id !== id));
+  useEffect(() => {
+  if (!bondId) return;
+
+  const q = query(
+    collection(db, "bonds", bondId, "movies"),
+    orderBy("createdAt", "desc")
+  );
+
+  const unsub = onSnapshot(q, (snap) => {
+    const data = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    })) as Movie[];
+
+    setMovies(data);
+  });
+
+  return unsub;
+}, [bondId]);
+
+const addMovie = async (data: Omit<Movie, "id" | "watched" | "rating">) => {
+  if (!bondId) return;
+
+  await addDoc(collection(db, "bonds", bondId, "movies"), {
+    ...data,
+    watched: false,
+    rating: 0,
+    createdAt: new Date(),
+  });
+
+  setShowAdd(false);
+};
+
+const toggleWatched = async (id: string) => {
+  if (!bondId) return;
+
+  const movie = movies.find((m) => m.id === id);
+  if (!movie) return;
+
+  await updateDoc(doc(db, "bonds", bondId, "movies", id), {
+    watched: !movie.watched,
+  });
+};
+
+const setRating = async (id: string, rating: number) => {
+  if (!bondId) return;
+
+  await updateDoc(doc(db, "bonds", bondId, "movies", id), {
+    rating,
+  });
+};
+
+const removeMovie = async (id: string) => {
+  if (!bondId) return;
+
+  await deleteDoc(doc(db, "bonds", bondId, "movies", id));
+};
 
   const watched = movies.filter((m) => m.watched);
   const pending = movies.filter((m) => !m.watched);

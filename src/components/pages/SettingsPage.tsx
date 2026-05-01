@@ -1,9 +1,10 @@
 "use client";
-
-import { useState } from "react";
-import type { User, Partner } from "../../lib/types";
+import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { AVATARS } from "../../lib/constants";
 import { PetalCanvas } from "../ui/PetalCanvas";
+import { useState} from "react";
+import type { User, Partner, Bond } from "../../lib/types";
 
 interface SettingsPageProps {
   user: User | null;
@@ -12,6 +13,7 @@ interface SettingsPageProps {
   setPartner: (partner: Partner) => void;
   reunionDate: string;
   setReunionDate: (date: string) => void;
+  bond: Bond | null; 
 }
 
 const SETTINGS_CSS = `
@@ -53,30 +55,44 @@ interface ProfileCardProps {
   onChange: (updates: Partial<{ name: string; nickname: string; avatar: string }>) => void;
   nameLabel?: string;
   nicknameLabel?: string;
+  locked?: boolean;
 }
 
-function ProfileCard({ title, value, onChange, nameLabel = "Name", nicknameLabel = "Nickname" }: ProfileCardProps) {
+
+function ProfileCard({
+  title,
+  value,
+  onChange,
+  nameLabel = "Name",
+  nicknameLabel = "Nickname",
+  locked = false,
+}: ProfileCardProps) {
   return (
     <div className="settings-card">
       <div className="settings-card-title">{title}</div>
       <div className="avatar-preview">{value.avatar}</div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 16 }}>
         {AVATARS.map((a) => (
-          <div
-            key={a}
-            className={`avatar-chip-sm ${value.avatar === a ? "selected" : ""}`}
-            onClick={() => onChange({ avatar: a })}
+         <div
+          key={a}
+          className={`avatar-chip-sm ${value.avatar === a ? "selected" : ""}`}
+          onClick={() => !locked && onChange({ avatar: a })}
+          style={{
+          opacity: locked ? 0.45 : 1,
+          cursor: locked ? "not-allowed" : "pointer",
+          }}
           >
-            {a}
+          {a}
           </div>
         ))}
       </div>
       <div className="input-wrap">
         <label className="input-label">{nameLabel}</label>
         <input
-          className="input-field"
-          value={value.name}
-          onChange={(e) => onChange({ name: e.target.value })}
+        className="input-field"
+        value={value.name}
+        disabled={locked}
+        onChange={(e) => onChange({ name: e.target.value })}
         />
       </div>
       <div className="input-wrap">
@@ -105,8 +121,9 @@ function ProfileCard({ title, value, onChange, nameLabel = "Name", nicknameLabel
  */
 export function SettingsPage({
   user, setUser,
-  partner, setPartner,
+  partner,
   reunionDate, setReunionDate,
+  bond,
 }: SettingsPageProps) {
   const [myForm, setMyForm] = useState({
     name:     user?.name     ?? "",
@@ -121,22 +138,35 @@ export function SettingsPage({
   const [reunion, setReunion] = useState(reunionDate ?? "");
   const [saved, setSaved] = useState(false);
 
-  const save = () => {
-    const newUser: User       = { ...(user    as User),    ...myForm   };
-    const newPartner: Partner = { ...(partner as Partner), ...partForm };
+  const save = async () => {
+  if (!auth.currentUser || !user?.bondId) return;
 
-    setUser(newUser);
-    setPartner(newPartner);
-    setReunionDate(reunion);
-
-    try {
-      localStorage.setItem("ab_user",    JSON.stringify(newUser));
-      localStorage.setItem("ab_partner", JSON.stringify(newPartner));
-    } catch {}
-
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2_000);
+  const newUser: User = {
+    ...(user as User),
+    ...myForm,
   };
+
+  // Update current user's profile
+  await updateDoc(doc(db, "users", auth.currentUser.uid), {
+    name: myForm.name,
+    nickname: myForm.nickname,
+    avatar: myForm.avatar,
+  });
+
+  // Update shared bond reunion date
+ 
+
+await updateDoc(doc(db, "bonds", user.bondId), {
+  reunionDate: reunion,
+  [`nicknames.${user.uid}`]: myForm.nickname,
+  [`nicknames.${partner?.uid}`]: partForm.nickname,
+});
+  setUser(newUser);
+  setReunionDate(reunion);
+
+  setSaved(true);
+  setTimeout(() => setSaved(false), 2_000);
+};
 
   const daysToGo = reunion
     ? Math.max(0, Math.ceil((new Date(reunion).getTime() - Date.now()) / 86_400_000))
@@ -164,7 +194,8 @@ export function SettingsPage({
               value={partForm}
               onChange={(u) => setPartForm((f) => ({ ...f, ...u }))}
               nameLabel="Partner Name"
-              nicknameLabel="Their Nickname for You"
+              nicknameLabel=" Their NickName"
+              locked
             />
 
             {/* Reunion date — spans full width */}

@@ -1,31 +1,48 @@
 // ─── Core Entity Types ─────────────────────────────────────────────────────
-
+import type { Timestamp } from "firebase/firestore";
 export interface User {
+  uid?: string;
   name: string;
   nickname: string;
   avatar: string;
   code: string;
+
+  email?: string;
+  bondId?: string;
+
+  online?: boolean;
+  lastSeen?: Timestamp | null;
+  createdAt?: Timestamp | null;
 }
 
 export interface Partner {
+  uid?: string;
   name: string;
   nickname: string;
   avatar: string;
   code: string;
+
+  email?: string;
+  bondId?: string;
+
+  online?: boolean;
+  lastSeen?: Timestamp | null;
+  createdAt?: Timestamp | null;
 }
 
 export interface Movie {
-  id: number;
+  id: string;
   title: string;
   year: number;
   genre: string;
   emoji: string;
   watched: boolean;
   rating: number;
+  createdAt?: any;
 }
 
 export interface StoryEvent {
-  id: number;
+  id: string;
   date: string;
   emoji: string;
   title: string;
@@ -36,7 +53,7 @@ export interface Message {
   id: string;
   sender: string;
   text: string;
-  createdAt?: any;
+  createdAt?: Timestamp | null;
 }
 
 export interface WeatherData {
@@ -45,6 +62,15 @@ export interface WeatherData {
   temp: number;
   humidity: number;
   wind: number;
+}
+export interface Bond {
+  user1Uid?: string;
+  user2Uid?: string | null;
+  reunionDate?: string;
+  quote1?: string;
+  quote2?: string;
+  nicknames?: Record<string, string>;
+  weatherCities?: Record<string, string>;
 }
 
 // ─── Page / Navigation Types ───────────────────────────────────────────────

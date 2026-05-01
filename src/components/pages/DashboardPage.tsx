@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import type { PageKey, User, Partner } from "../../lib/types";
 import { DASHBOARD_CARDS } from "../../lib/constants";
-import { useStorage } from "../../lib/hooks";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { PetalCanvas } from "../ui/PetalCanvas";
 import { CountdownClock } from "../ui/CountdownClock";
+import type { PageKey, User, Partner, Bond } from "../../lib/types";
 
 interface DashboardPageProps {
   setPage: (page: PageKey) => void;
   user: User | null;
   partner: Partner | null;
   reunionDate: string;
+  bond: Bond | null;
 }
+
 
 const DASH_CSS = `
   /* ── Layout ─────────────────────────────────────────── */
@@ -98,18 +101,36 @@ const DASH_CSS = `
 `;
 
 interface QuoteCardProps {
-  storageKey: string;
+  quote: string;
+  field: "quote1" | "quote2";
+  bondId?: string;
   avatar: string;
   nickname: string;
-  editLabel?: string;
+  placeholder: string;
+  editable?: boolean;
 }
 
-function QuoteCard({ storageKey, avatar, nickname, editLabel = "Edit" }: QuoteCardProps) {
-  const [quote, setQuote] = useStorage(storageKey, "");
+function QuoteCard({
+  quote,
+  field,
+  bondId,
+  avatar,
+  nickname,
+  placeholder,
+  editable = true,
+}: QuoteCardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(quote);
 
-  const save = () => { setQuote(draft); setEditing(false); };
+  const save = async () => {
+    if (!bondId) return;
+
+    await updateDoc(doc(db, "bonds", bondId), {
+      [field]: draft,
+    });
+
+    setEditing(false);
+  };
 
   return (
     <div className="quote-card">
@@ -123,13 +144,22 @@ function QuoteCard({ storageKey, avatar, nickname, editLabel = "Edit" }: QuoteCa
           <div className="quote-text">
             {quote || (
               <span style={{ color: "var(--muted2)", fontStyle: "italic" }}>
-                {storageKey.endsWith("1") ? "Leave a quote for your love…" : "Waiting for their words…"}
+                {placeholder}
               </span>
             )}
           </div>
-          <button className="quote-save-btn" onClick={() => { setDraft(quote); setEditing(true); }}>
-            {editLabel}
-          </button>
+
+          {editable && (
+            <button
+              className="quote-save-btn"
+              onClick={() => {
+                setDraft(quote);
+                setEditing(true);
+              }}
+            >
+              Edit
+            </button>
+          )}
         </>
       ) : (
         <>
@@ -140,7 +170,9 @@ function QuoteCard({ storageKey, avatar, nickname, editLabel = "Edit" }: QuoteCa
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Write something beautiful…"
           />
-          <button className="quote-save-btn" onClick={save}>Save</button>
+          <button className="quote-save-btn" onClick={save}>
+            Save
+          </button>
         </>
       )}
     </div>
@@ -157,7 +189,12 @@ function QuoteCard({ storageKey, avatar, nickname, editLabel = "Edit" }: QuoteCa
  *  - Replace useStorage for quotes with Firestore real-time listener.
  *  - Pass reunionDate from Firestore bond document.
  */
-export function DashboardPage({ setPage, user, partner, reunionDate }: DashboardPageProps) {
+export function DashboardPage({ setPage, user, partner, reunionDate, bond }: DashboardPageProps) {
+ const myDisplayNickname =
+  bond?.nicknames?.[user?.uid || ""] || user?.nickname || "You";
+
+const partnerDisplayNickname =
+  bond?.nicknames?.[partner?.uid || ""] || partner?.nickname || "Partner";
   return (
     <>
       <style>{DASH_CSS}</style>
@@ -171,17 +208,17 @@ export function DashboardPage({ setPage, user, partner, reunionDate }: Dashboard
             <div style={{ display: "flex", alignItems: "center", gap: 24, justifyContent: "center", marginBottom: 32 }}>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 6 }}>{user?.avatar ?? "💜"}</div>
-                <div style={{ fontSize: 13, color: "var(--muted)" }}>{user?.nickname ?? "You"}</div>
+                <div style={{ fontSize: 13, color: "var(--muted)" }}>{myDisplayNickname}</div>
               </div>
               <div className="orb">💜</div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 6 }}>{partner?.avatar ?? "🌸"}</div>
-                <div style={{ fontSize: 13, color: "var(--muted)" }}>{partner?.nickname ?? "Partner"}</div>
+                <div style={{ fontSize: 13, color: "var(--muted)" }}>{partnerDisplayNickname}</div>
               </div>
             </div>
 
             <div className="couple-names">
-              {user?.nickname ?? "You"} & {partner?.nickname ?? "Your Love"}
+              {myDisplayNickname} & {partnerDisplayNickname}
             </div>
             <div className="couple-tagline">∞ bonded across every distance ∞</div>
           </div>
@@ -223,16 +260,22 @@ export function DashboardPage({ setPage, user, partner, reunionDate }: Dashboard
           </div>
           <div className="quotes-grid">
             <QuoteCard
-              storageKey="ab_quote1"
+              quote={bond?.quote1 ?? ""}
+              field="quote1"
+              bondId={user?.bondId}
               avatar={user?.avatar ?? "💜"}
-              nickname={user?.nickname ?? "You"}
+              nickname={myDisplayNickname}
+              placeholder="Leave a quote for your love…"
             />
-            <QuoteCard
-              storageKey="ab_quote2"
-              avatar={partner?.avatar ?? "🌸"}
-              nickname={partner?.nickname ?? "Partner"}
-              editLabel="Edit (simulate)"
-            />
+
+<QuoteCard
+  quote={bond?.quote2 ?? ""}
+  field="quote2"
+  bondId={user?.bondId}
+  avatar={partner?.avatar ?? "🌸"}
+  nickname={partnerDisplayNickname}
+  placeholder="Waiting for their words…"
+/>
           </div>
 
           {/* ── Footer ── */}

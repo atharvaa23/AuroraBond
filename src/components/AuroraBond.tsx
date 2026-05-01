@@ -24,9 +24,9 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-
+import type { PageKey, User, Partner, Bond } from "../lib/types";
 import { auth, db } from "@/lib/firebase";
-import type { PageKey, User, Partner } from "../lib/types";
+
 
 
 // Layout
@@ -42,6 +42,8 @@ import { ChatPage      } from "./pages/ChatPage";
 import { OurStoryPage  } from "./pages/OurStoryPage";
 import { SettingsPage  } from "./pages/SettingsPage";
 
+
+
 const PAGES_WITHOUT_NAV: PageKey[] = ["landing", "login"];
 
 export default function AuroraBond() {
@@ -50,6 +52,7 @@ export default function AuroraBond() {
   const [user, setUser] = useState<User | null>(null);
   const [partner, setPartner] = useState<Partner | null>(null);
   const [reunionDate, setReunionDate] = useState("");
+  const [bond, setBond] = useState<Bond | null>(null);
 
   // Auto-forward to dashboard if already logged in
   let unsubPartner: (() => void) | undefined;
@@ -71,7 +74,10 @@ useEffect(() => {
         if (snap.exists()) {
   const userData = snap.data() as User & { bondId?: string };
 
-  setUser(userData);
+  setUser({
+  ...userData,
+  uid: firebaseUser.uid,
+});
   setPage("dashboard");
 
   if (userData.bondId) {
@@ -79,21 +85,27 @@ useEffect(() => {
       doc(db, "bonds", userData.bondId),
       (bondSnap) => {
         if (bondSnap.exists()) {
-  const bond = bondSnap.data();
+          const bondData = bondSnap.data() as Bond;
 
-  setReunionDate(bond.reunionDate || "");
+          setBond(bondData);
+          setReunionDate(bondData.reunionDate || "");
 
-  const partnerUid =
-    bond.user1Uid === firebaseUser.uid
-      ? bond.user2Uid
-      : bond.user1Uid;
+  if (!bondData?.user1Uid) return;
+
+const partnerUid =
+  bondData.user1Uid === firebaseUser.uid
+    ? bondData.user2Uid
+    : bondData.user1Uid;
 
   if (partnerUid) {
    unsubPartner = onSnapshot(
   doc(db, "users", partnerUid),
   (partnerSnap) => {
     if (partnerSnap.exists()) {
-      setPartner(partnerSnap.data() as Partner);
+      setPartner({
+  ...(partnerSnap.data() as Partner),
+  uid: partnerUid,
+});
     }
   }
 );
@@ -125,16 +137,17 @@ useEffect(() => {
 
       {page === "landing"   && <LandingPage    setPage={setPage} />}
       {page === "login"     && <LoginPage      setPage={setPage} setUser={setUser} setPartner={setPartner} />}
-      {page === "dashboard" && <DashboardPage  setPage={setPage} user={user} partner={partner} reunionDate={reunionDate} />}
-      {page === "weather"   && <WeatherPage    user={user} partner={partner} />}
-      {page === "movies"    && <MovieVaultPage />}
-      {page === "chat"      && <ChatPage       user={user} partner={partner} />}
+      {page === "dashboard" && <DashboardPage setPage={setPage} user={user} partner={partner} reunionDate={reunionDate} bond={bond} />}
+      {page === "weather"   && <WeatherPage user={user} partner={partner} bond={bond} />}
+      {page === "movies"    && <MovieVaultPage user={user} />}
+      {page === "chat"      && <ChatPage user={user} partner={partner} bond={bond} />}
       {page === "story"     && <OurStoryPage   user={user} partner={partner} />}
       {page === "settings"  && (
         <SettingsPage
-          user={user}           setUser={setUser}
-          partner={partner}     setPartner={setPartner}
-          reunionDate={reunionDate} setReunionDate={setReunionDate}
+        user={user} setUser={setUser}
+        partner={partner} setPartner={setPartner}
+        reunionDate={reunionDate} setReunionDate={setReunionDate}
+        bond={bond}
         />
       )}
     </>

@@ -1,9 +1,16 @@
 "use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { User, Partner, StoryEvent } from "../../lib/types";
-import { DEFAULT_STORY } from "../../lib/constants";
-import { useStorage } from "../../lib/hooks";
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { PetalCanvas } from "../ui/PetalCanvas";
 
 interface OurStoryPageProps {
@@ -56,25 +63,51 @@ function formatDate(raw: string) {
  *  - Both partners see events in real-time via onSnapshot.
  */
 export function OurStoryPage({ user, partner }: OurStoryPageProps) {
-  const [events, setEvents] = useStorage<StoryEvent[]>("ab_story", DEFAULT_STORY);
+  const [events, setEvents] = useState<StoryEvent[]>([]);
+  const bondId = user?.bondId;  
+  useEffect(() => {
+  if (!bondId) return;
+
+  const q = query(
+    collection(db, "bonds", bondId, "events"),
+    orderBy("date", "asc")
+  );
+
+  const unsub = onSnapshot(q, (snap) => {
+    const data = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    })) as StoryEvent[];
+
+    setEvents(data);
+  });
+
+  return unsub;
+}, [bondId]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ date: "", emoji: "💜", title: "", desc: "" });
 
-  const addEvent = () => {
-    if (!form.title.trim() || !form.date) return;
-    const updated = [...events, { ...form, id: Date.now() }].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    setEvents(updated);
-    setForm({ date: "", emoji: "💜", title: "", desc: "" });
-    setShowAdd(false);
-  };
+  const addEvent = async () => {
+  if (!bondId || !form.title.trim() || !form.date) return;
 
-  const removeEvent = (id: number) => setEvents(events.filter((e) => e.id !== id));
+  await addDoc(collection(db, "bonds", bondId, "events"), {
+    ...form,
+  });
 
-  const sorted = [...events].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  setForm({ date: "", emoji: "💜", title: "", desc: "" });
+  setShowAdd(false);
+};
+
+
+  const removeEvent = async (id: string) => {
+  if (!bondId) return;
+
+  await deleteDoc(doc(db, "bonds", bondId, "events", id));
+};
+
+const sorted = [...events].sort(
+  (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+);
 
   return (
     <>

@@ -63,10 +63,7 @@ export function LandingPage({ setPage }: LandingPageProps) {
           </p>
           <div className="landing-cta">
             <button className="btn-primary" onClick={() => setPage("login")}>
-              Enter Our Universe
-            </button>
-            <button className="btn-ghost" onClick={() => setPage("login")}>
-              Sign In
+              Start AuroraBond →
             </button>
           </div>
         </div>
