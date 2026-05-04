@@ -89,9 +89,10 @@ export type PageKey =
   | "weather"
   | "movies"
   | "chat"
+  | "games"
+  | "music"
   | "story"
-  | "settings"
-  | "games";
+  | "settings";
 
 // ─── App State (top-level shape) ───────────────────────────────────────────
 

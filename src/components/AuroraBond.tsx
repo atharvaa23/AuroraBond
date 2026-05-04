@@ -33,6 +33,7 @@ import { ChatPage } from "./pages/ChatPage";
 import { OurStoryPage } from "./pages/OurStoryPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { GameTallyPage } from "./pages/GameTallyPage";
+import { MusicPage } from "./pages/MusicPage";
 
 const PAGES_WITHOUT_NAV: PageKey[] = ["landing", "login"];
 
@@ -266,6 +267,10 @@ export default function AuroraBond() {
       )}
 
       {page === "movies" && <MovieVaultPage user={user} />}
+
+      {page === "music" && (
+        <MusicPage user={user} partner={partner} bond={bond} />
+      )}
 
       {page === "chat" && (
         <ChatPage user={user} partner={partner} bond={bond} />

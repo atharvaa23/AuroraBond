@@ -59,9 +59,16 @@ export const DASHBOARD_CARDS = [
   {
     page: "games",
     icon: "🎮",
-    tag: "❤️",
+    tag: "TALLY SCORES",
     title: "Game Scores",
     desc: "Keep score of every tiny competition between you two.",
+  },
+  {
+    page: "music",
+    icon: "🎧",
+    tag: "SOUNDTRACK",
+    title: "Music",
+    desc: "Save playlists, Spotify jams, and songs that feel like you two.",
   },
 ] as const;
 
