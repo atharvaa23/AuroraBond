@@ -47,7 +47,7 @@ function AddMovieModal({ onAdd, onClose }: AddMovieModalProps) {
     if (!form.title.trim()) return;
     onAdd(form);
   };
-  
+
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -56,10 +56,10 @@ function AddMovieModal({ onAdd, onClose }: AddMovieModalProps) {
 
         {(
           [
-            { label: "Title",  key: "title", type: "text",   ph: "Movie title…" },
-            { label: "Year",   key: "year",  type: "number", ph: ""             },
-            { label: "Genre",  key: "genre", type: "text",   ph: "Romance, Comedy…" },
-            { label: "Emoji",  key: "emoji", type: "text",   ph: "🎬"           },
+            { label: "Title", key: "title", type: "text", ph: "Movie title…" },
+            { label: "Year", key: "year", type: "number", ph: "" },
+            { label: "Genre", key: "genre", type: "text", ph: "Romance, Comedy…" },
+            { label: "Emoji", key: "emoji", type: "text", ph: "🎬" },
           ] as const
         ).map(({ label, key, type, ph }) => (
           <div className="input-wrap" key={key}>
@@ -85,9 +85,9 @@ function AddMovieModal({ onAdd, onClose }: AddMovieModalProps) {
 
 interface MovieCardProps {
   movie: Movie;
- onToggleWatched: (id: string) => void;
-onSetRating: (id: string, rating: number) => void;
-onRemove: (id: string) => void;
+  onToggleWatched: (id: string) => void;
+  onSetRating: (id: string, rating: number) => void;
+  onRemove: (id: string) => void;
 }
 
 function MovieCardComponent({ movie, onToggleWatched, onSetRating, onRemove }: MovieCardProps) {
@@ -150,62 +150,62 @@ export function MovieVaultPage({ user }: MovieVaultPageProps) {
   const [showAdd, setShowAdd] = useState(false);
 
   useEffect(() => {
-  if (!bondId) return;
+    if (!bondId) return;
 
-  const q = query(
-    collection(db, "bonds", bondId, "movies"),
-    orderBy("createdAt", "desc")
-  );
+    const q = query(
+      collection(db, "bonds", bondId, "movies"),
+      orderBy("createdAt", "desc")
+    );
 
-  const unsub = onSnapshot(q, (snap) => {
-    const data = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as Movie[];
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as Movie[];
 
-    setMovies(data);
-  });
+      setMovies(data);
+    });
 
-  return unsub;
-}, [bondId]);
+    return unsub;
+  }, [bondId]);
 
-const addMovie = async (data: Omit<Movie, "id" | "watched" | "rating">) => {
-  if (!bondId) return;
+  const addMovie = async (data: Omit<Movie, "id" | "watched" | "rating">) => {
+    if (!bondId) return;
 
-  await addDoc(collection(db, "bonds", bondId, "movies"), {
-    ...data,
-    watched: false,
-    rating: 0,
-    createdAt: new Date(),
-  });
+    await addDoc(collection(db, "bonds", bondId, "movies"), {
+      ...data,
+      watched: false,
+      rating: 0,
+      createdAt: new Date(),
+    });
 
-  setShowAdd(false);
-};
+    setShowAdd(false);
+  };
 
-const toggleWatched = async (id: string) => {
-  if (!bondId) return;
+  const toggleWatched = async (id: string) => {
+    if (!bondId) return;
 
-  const movie = movies.find((m) => m.id === id);
-  if (!movie) return;
+    const movie = movies.find((m) => m.id === id);
+    if (!movie) return;
 
-  await updateDoc(doc(db, "bonds", bondId, "movies", id), {
-    watched: !movie.watched,
-  });
-};
+    await updateDoc(doc(db, "bonds", bondId, "movies", id), {
+      watched: !movie.watched,
+    });
+  };
 
-const setRating = async (id: string, rating: number) => {
-  if (!bondId) return;
+  const setRating = async (id: string, rating: number) => {
+    if (!bondId) return;
 
-  await updateDoc(doc(db, "bonds", bondId, "movies", id), {
-    rating,
-  });
-};
+    await updateDoc(doc(db, "bonds", bondId, "movies", id), {
+      rating,
+    });
+  };
 
-const removeMovie = async (id: string) => {
-  if (!bondId) return;
+  const removeMovie = async (id: string) => {
+    if (!bondId) return;
 
-  await deleteDoc(doc(db, "bonds", bondId, "movies", id));
-};
+    await deleteDoc(doc(db, "bonds", bondId, "movies", id));
+  };
 
   const watched = movies.filter((m) => m.watched);
   const pending = movies.filter((m) => !m.watched);

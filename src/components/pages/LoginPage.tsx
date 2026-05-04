@@ -12,7 +12,7 @@ import {
   getDocs,
   updateDoc,
   serverTimestamp
-  
+
 } from "firebase/firestore";
 
 
@@ -157,118 +157,118 @@ export function LoginPage({ setPage, setUser, setPartner }: LoginPageProps) {
   const [partnerCode, setPartnerCode] = useState("");
   const [avatar, setAvatar] = useState("💜");
   const [code] = useState(() => generateCode());
-  
+
   const handleGoogleLogin = async () => {
-  try {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const firebaseUser = result.user;
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
 
-    const userRef = doc(db, "users", firebaseUser.uid);
+      const userRef = doc(db, "users", firebaseUser.uid);
 
-    const user: User = {
-      name: name || firebaseUser.displayName || "Unknown",
-      nickname: nickname || firebaseUser.displayName || "Unknown",
-      avatar,
-      code,
-      email: firebaseUser.email || "",
-      bondId: "",
-      online: true,
-      lastSeen: null,
-      createdAt: null,
-    };
+      const user: User = {
+        name: name || firebaseUser.displayName || "Unknown",
+        nickname: nickname || firebaseUser.displayName || "Unknown",
+        avatar,
+        code,
+        email: firebaseUser.email || "",
+        bondId: "",
+        online: true,
+        lastSeen: null,
+        createdAt: null,
+      };
 
-    let bondId = "";
+      let bondId = "";
 
-    if (mode === "create") {
-      const bondRef = await addDoc(collection(db, "bonds"), {
-  user1Uid: firebaseUser.uid,
-  user2Uid: null,
-  reunionDate: "",
-  quote1: "",
-  quote2: "",
-  user1PartnerNickname: "",
-  user2PartnerNickname: "",
-  createdAt: serverTimestamp(),
-  code,
-});
+      if (mode === "create") {
+        const bondRef = await addDoc(collection(db, "bonds"), {
+          user1Uid: firebaseUser.uid,
+          user2Uid: null,
+          reunionDate: "",
+          quote1: "",
+          quote2: "",
+          user1PartnerNickname: "",
+          user2PartnerNickname: "",
+          createdAt: serverTimestamp(),
+          code,
+        });
 
-      bondId = bondRef.id;
-    } else {
-      if (!partnerCode.trim()) {
-  alert("Enter bond code");
-  return;
-}
-      const q = query(
-        collection(db, "bonds"),
-        where("code", "==", partnerCode.trim().toUpperCase())
+        bondId = bondRef.id;
+      } else {
+        if (!partnerCode.trim()) {
+          alert("Enter bond code");
+          return;
+        }
+        const q = query(
+          collection(db, "bonds"),
+          where("code", "==", partnerCode.trim().toUpperCase())
+        );
+
+        const snapshot = await getDocs(q);
+
+
+
+        if (snapshot.empty) {
+          alert("Invalid bond code");
+          return;
+        }
+
+        const bondDoc = snapshot.docs[0];
+        const bondData = bondDoc.data();
+
+        if (bondData.user2Uid) {
+          alert("This bond is already connected.");
+          return;
+        }
+
+        bondId = bondDoc.id;
+
+        await updateDoc(doc(db, "bonds", bondId), {
+          user2Uid: firebaseUser.uid,
+        });
+      }
+
+      await setDoc(
+        userRef,
+        {
+          ...user,
+          bondId,
+          online: true,
+          lastSeen: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
       );
 
-      const snapshot = await getDocs(q);
-
-      
-
-if (snapshot.empty) {
-        alert("Invalid bond code");
-        return;
-      }
-
-      const bondDoc = snapshot.docs[0];
-      const bondData = bondDoc.data();
-
-      if (bondData.user2Uid) {
-        alert("This bond is already connected.");
-        return;
-      }
-
-      bondId = bondDoc.id;
-
-      await updateDoc(doc(db, "bonds", bondId), {
-        user2Uid: firebaseUser.uid,
-      });
-    }
-
-    await setDoc(
-      userRef,
-      {
+      setUser({
         ...user,
         bondId,
-        online: true,
-        lastSeen: serverTimestamp(),
-        createdAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+      });
+      const bondSnap = await getDocs(
+        query(collection(db, "bonds"), where("__name__", "==", bondId))
+      );
 
-    setUser({
-      ...user,
-      bondId,
-    });
-  const bondSnap = await getDocs(
-  query(collection(db, "bonds"), where("__name__", "==", bondId))
-);
+      const bond = bondSnap.docs[0]?.data();
 
-const bond = bondSnap.docs[0]?.data();
+      const partnerUid =
+        bond?.user1Uid === firebaseUser.uid
+          ? bond?.user2Uid
+          : bond?.user1Uid;
 
-const partnerUid =
-  bond?.user1Uid === firebaseUser.uid
-    ? bond?.user2Uid
-    : bond?.user1Uid;
+      if (partnerUid) {
+        const partnerDoc = await getDocs(
+          query(collection(db, "users"), where("__name__", "==", partnerUid))
+        );
 
-if (partnerUid) {
-  const partnerDoc = await getDocs(
-    query(collection(db, "users"), where("__name__", "==", partnerUid))
-  );
-
-  if (!partnerDoc.empty) {
-    setPartner(partnerDoc.docs[0].data() as Partner);
-  }
-}
-    setPage("dashboard");
-  } catch (err) {
-    console.error(err);
-  }
-};
+        if (!partnerDoc.empty) {
+          setPartner(partnerDoc.docs[0].data() as Partner);
+        }
+      }
+      setPage("dashboard");
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <>
@@ -369,7 +369,7 @@ if (partnerUid) {
               <div className="divider-line" />
             </div>
 
-            
+
           </div>
         </div>
       </div>

@@ -64,50 +64,50 @@ function formatDate(raw: string) {
  */
 export function OurStoryPage({ user, partner }: OurStoryPageProps) {
   const [events, setEvents] = useState<StoryEvent[]>([]);
-  const bondId = user?.bondId;  
+  const bondId = user?.bondId;
   useEffect(() => {
-  if (!bondId) return;
+    if (!bondId) return;
 
-  const q = query(
-    collection(db, "bonds", bondId, "events"),
-    orderBy("date", "asc")
-  );
+    const q = query(
+      collection(db, "bonds", bondId, "events"),
+      orderBy("date", "asc")
+    );
 
-  const unsub = onSnapshot(q, (snap) => {
-    const data = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as StoryEvent[];
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as StoryEvent[];
 
-    setEvents(data);
-  });
+      setEvents(data);
+    });
 
-  return unsub;
-}, [bondId]);
+    return unsub;
+  }, [bondId]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ date: "", emoji: "💜", title: "", desc: "" });
 
   const addEvent = async () => {
-  if (!bondId || !form.title.trim() || !form.date) return;
+    if (!bondId || !form.title.trim() || !form.date) return;
 
-  await addDoc(collection(db, "bonds", bondId, "events"), {
-    ...form,
-  });
+    await addDoc(collection(db, "bonds", bondId, "events"), {
+      ...form,
+    });
 
-  setForm({ date: "", emoji: "💜", title: "", desc: "" });
-  setShowAdd(false);
-};
+    setForm({ date: "", emoji: "💜", title: "", desc: "" });
+    setShowAdd(false);
+  };
 
 
   const removeEvent = async (id: string) => {
-  if (!bondId) return;
+    if (!bondId) return;
 
-  await deleteDoc(doc(db, "bonds", bondId, "events", id));
-};
+    await deleteDoc(doc(db, "bonds", bondId, "events", id));
+  };
 
-const sorted = [...events].sort(
-  (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-);
+  const sorted = [...events].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
 
   return (
     <>
@@ -153,10 +153,10 @@ const sorted = [...events].sort(
               <div className="modal-title">Add a Moment</div>
               {(
                 [
-                  { label: "Date",        key: "date",  type: "date" },
-                  { label: "Emoji",       key: "emoji", type: "text" },
-                  { label: "Title",       key: "title", type: "text" },
-                  { label: "Description", key: "desc",  type: "text" },
+                  { label: "Date", key: "date", type: "date" },
+                  { label: "Emoji", key: "emoji", type: "text" },
+                  { label: "Title", key: "title", type: "text" },
+                  { label: "Description", key: "desc", type: "text" },
                 ] as const
               ).map(({ label, key, type }) => (
                 <div className="input-wrap" key={key}>

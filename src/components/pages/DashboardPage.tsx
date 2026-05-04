@@ -16,89 +16,486 @@ interface DashboardPageProps {
   bond: Bond | null;
 }
 
+const MOODS = [
+  { emoji: "🥰", label: "Loved" },
+  { emoji: "😊", label: "Happy" },
+  { emoji: "😌", label: "Calm" },
+  { emoji: "🥺", label: "Missing you" },
+  { emoji: "😴", label: "Sleepy" },
+  { emoji: "😤", label: "Annoyed" },
+  { emoji: "🥲", label: "Emotional" },
+  { emoji: "🤍", label: "Soft" },
+];
 
 const DASH_CSS = `
-  /* ── Layout ─────────────────────────────────────────── */
-  .dash-wrap { padding: 100px 40px 60px; max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
-  @media (max-width: 640px) { .dash-wrap { padding: 100px 20px 60px; } }
+  .dash-wrap {
+    padding: 100px 40px 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
 
-  /* ── Hero ─────────────────────────────────────────── */
-  .dash-hero { text-align: center; margin-bottom: 60px; }
-  .couple-names { font-family: var(--font-serif); font-size: 32px; font-weight: 300; margin-bottom: 4px; }
-  .couple-tagline { color: var(--muted); font-size: 13px; letter-spacing: 1px; }
+  @media (max-width: 640px) {
+    .dash-wrap {
+      padding: 100px 20px 60px;
+    }
+  }
+
+  .dash-hero {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .couple-names {
+    font-family: var(--font-serif);
+    font-size: 32px;
+    font-weight: 300;
+    margin-bottom: 4px;
+  }
+
+  .couple-tagline {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
   .orb {
-    width: 100px; height: 100px; border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
     background: linear-gradient(135deg, rgba(192,132,252,0.3), rgba(251,113,133,0.2));
     animation: orb 4s ease-in-out infinite;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px; position: relative; cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    position: relative;
+    cursor: pointer;
   }
-  .orb::before, .orb::after {
-    content: ''; position: absolute; border-radius: 50%;
+
+  .orb::before,
+  .orb::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
     border: 1px solid rgba(192,132,252,0.3);
     animation: pulseRing 3s ease-out infinite;
-    width: 100%; height: 100%;
+    width: 100%;
+    height: 100%;
   }
-  .orb::after { animation-delay: 1.5s; }
 
-  /* ── Nav Cards ─────────────────────────────────────── */
-  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .orb::after {
+    animation-delay: 1.5s;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
   .dash-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: 28px; cursor: pointer;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    cursor: pointer;
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    backdrop-filter: blur(20px); position: relative; overflow: hidden;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
   }
+
   .dash-card::before {
-    content: ''; position: absolute; inset: 0; border-radius: var(--radius-lg);
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
     background: linear-gradient(135deg, transparent 0%, rgba(192,132,252,0.05) 100%);
-    opacity: 0; transition: opacity 0.4s;
+    opacity: 0;
+    transition: opacity 0.4s;
   }
-  .dash-card:hover { transform: translateY(-4px) scale(1.01); border-color: var(--border-glow); background: var(--card-hover); }
-  .dash-card:hover::before { opacity: 1; }
-  .dash-card-icon { font-size: 28px; margin-bottom: 16px; }
-  .dash-card-tag { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--aurora1); margin-bottom: 8px; }
-  .dash-card-title { font-family: var(--font-serif); font-size: 24px; font-weight: 400; margin-bottom: 8px; }
-  .dash-card-desc { color: var(--muted); font-size: 13px; line-height: 1.6; }
-  .dash-card-arrow { position: absolute; bottom: 24px; right: 24px; color: var(--muted2); font-size: 20px; transition: all 0.3s; }
-  .dash-card:hover .dash-card-arrow { color: var(--aurora1); transform: translate(2px, -2px); }
 
-  /* ── Quotes ────────────────────────────────────────── */
-  .quotes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 640px) { .quotes-grid { grid-template-columns: 1fr; } }
+  .dash-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    border-color: var(--border-glow);
+    background: var(--card-hover);
+  }
+
+  .dash-card:hover::before {
+    opacity: 1;
+  }
+
+  .dash-card-icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+
+  .dash-card-tag {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--aurora1);
+    margin-bottom: 8px;
+  }
+
+  .dash-card-title {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+
+  .dash-card-desc {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .dash-card-arrow {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    color: var(--muted2);
+    font-size: 20px;
+    transition: all 0.3s;
+  }
+
+  .dash-card:hover .dash-card-arrow {
+    color: var(--aurora1);
+    transform: translate(2px, -2px);
+  }
+
+  .section-header {
+    margin-top: 40px;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-family: var(--font-serif);
+    font-size: 26px;
+    font-weight: 300;
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--aurora1);
+  }
+
+  .mood-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    backdrop-filter: blur(20px);
+    margin-bottom: 32px;
+  }
+
+  .mood-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+
+  .mood-title {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 300;
+  }
+
+  .mood-sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  .mood-display-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  @media (max-width: 640px) {
+    .mood-display-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .mood-person {
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    border-radius: 20px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .mood-avatar {
+    font-size: 34px;
+    margin-bottom: 8px;
+  }
+
+  .mood-name {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .mood-current {
+    font-family: var(--font-serif);
+    font-size: 26px;
+  }
+
+  .mood-current span {
+    margin-right: 8px;
+  }
+
+  .mood-empty {
+    color: var(--muted2);
+    font-style: italic;
+    font-size: 15px;
+  }
+
+  .mood-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .mood-chip {
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border-radius: var(--radius-full);
+    padding: 9px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  .mood-chip:hover {
+    border-color: var(--aurora1);
+    background: rgba(192,132,252,0.1);
+    transform: translateY(-1px);
+  }
+
+  .mood-chip.active {
+    border-color: var(--aurora1);
+    background: linear-gradient(135deg, rgba(192,132,252,0.24), rgba(251,113,133,0.14));
+    color: white;
+  }
+
+  .quotes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .quotes-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .quote-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: 28px; backdrop-filter: blur(20px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    backdrop-filter: blur(20px);
   }
-  .quote-author {
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--aurora1); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
-  }
-  .quote-text {
-    font-family: var(--font-serif); font-size: 20px; font-weight: 300;
-    font-style: italic; color: var(--text); line-height: 1.6; min-height: 60px;
-  }
-  .quote-input {
-    width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); color: var(--text); padding: 12px 16px;
-    font-family: var(--font-serif); font-size: 18px; font-style: italic;
-    outline: none; transition: all 0.3s; resize: none; margin-top: 12px;
-  }
-  .quote-input:focus { border-color: var(--aurora1); }
-  .quote-input::placeholder { color: var(--muted2); }
-  .quote-save-btn {
-    background: none; border: 1px solid var(--aurora1); color: var(--aurora1);
-    padding: 6px 16px; border-radius: var(--radius-full); cursor: pointer; font-size: 12px;
-    margin-top: 10px; transition: all 0.3s; font-family: var(--font-sans);
-  }
-  .quote-save-btn:hover { background: rgba(192,132,252,0.1); }
 
-  /* ── Footer ────────────────────────────────────────── */
+  .quote-author {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--aurora1);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .quote-text {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 60px;
+  }
+
+  .quote-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 12px 16px;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-style: italic;
+    outline: none;
+    transition: all 0.3s;
+    resize: none;
+    margin-top: 12px;
+  }
+
+  .quote-input:focus {
+    border-color: var(--aurora1);
+  }
+
+  .quote-input::placeholder {
+    color: var(--muted2);
+  }
+
+  .quote-save-btn {
+    background: none;
+    border: 1px solid var(--aurora1);
+    color: var(--aurora1);
+    padding: 6px 16px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 10px;
+    transition: all 0.3s;
+    font-family: var(--font-sans);
+  }
+
+  .quote-save-btn:hover {
+    background: rgba(192,132,252,0.1);
+  }
+
   .dash-footer {
-    text-align: center; margin-top: 60px; padding-top: 40px;
+    text-align: center;
+    margin-top: 60px;
+    padding-top: 40px;
     border-top: 1px solid var(--border);
   }
 `;
+
+interface Mood {
+  emoji: string;
+  label: string;
+}
+
+interface CurrentMoodCardProps {
+  user: User | null;
+  partner: Partner | null;
+  bond: Bond | null;
+  myDisplayNickname: string;
+  partnerDisplayNickname: string;
+}
+
+function CurrentMoodCard({
+  user,
+  partner,
+  bond,
+  myDisplayNickname,
+  partnerDisplayNickname,
+}: CurrentMoodCardProps) {
+  const [saving, setSaving] = useState(false);
+
+  const currentUid = user?.uid;
+
+  const partnerUid =
+    bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
+
+  const myMood = currentUid ? bond?.currentMoods?.[currentUid] : null;
+  const partnerMood = partnerUid ? bond?.currentMoods?.[partnerUid] : null;
+
+  const saveMood = async (mood: Mood) => {
+    if (!user?.bondId || !currentUid) return;
+
+    try {
+      setSaving(true);
+
+      await updateDoc(doc(db, "bonds", user.bondId), {
+        [`currentMoods.${currentUid}`]: mood,
+      });
+    } catch (error) {
+      console.error("Mood save error:", error);
+      alert("Could not save mood.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mood-card">
+      <div className="mood-top">
+        <div>
+          <div className="mood-title">Current Mood</div>
+          <div className="mood-sub">
+            A tiny status for what your heart feels right now.
+          </div>
+        </div>
+
+        {saving && (
+          <div style={{ color: "var(--muted)", fontSize: 12 }}>
+            Saving...
+          </div>
+        )}
+      </div>
+
+      <div className="mood-display-grid">
+        <div className="mood-person">
+          <div className="mood-avatar">{user?.avatar ?? "💜"}</div>
+          <div className="mood-name">{myDisplayNickname}</div>
+
+          {myMood ? (
+            <div className="mood-current">
+              <span>{myMood.emoji}</span>
+              {myMood.label}
+            </div>
+          ) : (
+            <div className="mood-empty">No mood set yet</div>
+          )}
+        </div>
+
+        <div className="mood-person">
+          <div className="mood-avatar">{partner?.avatar ?? "🌸"}</div>
+          <div className="mood-name">{partnerDisplayNickname}</div>
+
+          {partnerMood ? (
+            <div className="mood-current">
+              <span>{partnerMood.emoji}</span>
+              {partnerMood.label}
+            </div>
+          ) : (
+            <div className="mood-empty">Waiting for their mood...</div>
+          )}
+        </div>
+      </div>
+
+      <div className="mood-picker">
+        {MOODS.map((mood) => {
+          const active =
+            myMood?.emoji === mood.emoji && myMood?.label === mood.label;
+
+          return (
+            <button
+              key={`${mood.emoji}-${mood.label}`}
+              className={`mood-chip ${active ? "active" : ""}`}
+              onClick={() => saveMood(mood)}
+              disabled={saving}
+            >
+              {mood.emoji} {mood.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 interface QuoteCardProps {
   quote: string;
@@ -170,6 +567,7 @@ function QuoteCard({
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Write something beautiful…"
           />
+
           <button className="quote-save-btn" onClick={save}>
             Save
           </button>
@@ -179,51 +577,68 @@ function QuoteCard({
   );
 }
 
-/**
- * DashboardPage
- * ─────────────
- * Owns: hero display, countdown, nav card grid, quotes section.
- * Does NOT own: user data (received as props), routing (delegated via setPage).
- *
- * Firebase-ready:
- *  - Replace useStorage for quotes with Firestore real-time listener.
- *  - Pass reunionDate from Firestore bond document.
- */
-export function DashboardPage({ setPage, user, partner, reunionDate, bond }: DashboardPageProps) {
- const myDisplayNickname =
-  bond?.nicknames?.[user?.uid || ""] || user?.nickname || "You";
+export function DashboardPage({
+  setPage,
+  user,
+  partner,
+  reunionDate,
+  bond,
+}: DashboardPageProps) {
+  const myDisplayNickname =
+    bond?.nicknames?.[user?.uid || ""] || user?.nickname || "You";
 
-const partnerDisplayNickname =
-  bond?.nicknames?.[partner?.uid || ""] || partner?.nickname || "Partner";
+  const partnerDisplayNickname =
+    bond?.nicknames?.[partner?.uid || ""] || partner?.nickname || "Partner";
+
   return (
     <>
       <style>{DASH_CSS}</style>
+
       <div className="page">
         <div className="aurora-bg" />
         <PetalCanvas />
 
         <div className="dash-wrap">
-          {/* ── Couple Hero ── */}
           <div className="dash-hero">
-            <div style={{ display: "flex", alignItems: "center", gap: 24, justifyContent: "center", marginBottom: 32 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 24,
+                justifyContent: "center",
+                marginBottom: 32,
+              }}
+            >
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 40, marginBottom: 6 }}>{user?.avatar ?? "💜"}</div>
-                <div style={{ fontSize: 13, color: "var(--muted)" }}>{myDisplayNickname}</div>
+                <div style={{ fontSize: 40, marginBottom: 6 }}>
+                  {user?.avatar ?? "💜"}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                  {myDisplayNickname}
+                </div>
               </div>
+
               <div className="orb">💜</div>
+
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 40, marginBottom: 6 }}>{partner?.avatar ?? "🌸"}</div>
-                <div style={{ fontSize: 13, color: "var(--muted)" }}>{partnerDisplayNickname}</div>
+                <div style={{ fontSize: 40, marginBottom: 6 }}>
+                  {partner?.avatar ?? "🌸"}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                  {partnerDisplayNickname}
+                </div>
               </div>
             </div>
 
             <div className="couple-names">
               {myDisplayNickname} & {partnerDisplayNickname}
             </div>
-            <div className="couple-tagline">∞ bonded across every distance ∞</div>
+
+            <div className="couple-tagline">
+              ∞ bonded across every distance ∞
+            </div>
           </div>
 
-          {/* ── Countdown ── */}
           {reunionDate ? (
             <CountdownClock reunionDate={reunionDate} />
           ) : (
@@ -234,10 +649,10 @@ const partnerDisplayNickname =
             </div>
           )}
 
-          {/* ── Nav Cards ── */}
           <div style={{ marginBottom: 12 }}>
             <span className="section-label">Your Universe</span>
           </div>
+
           <div className="cards-grid">
             {DASHBOARD_CARDS.map((c) => (
               <div
@@ -254,10 +669,22 @@ const partnerDisplayNickname =
             ))}
           </div>
 
-          {/* ── Quotes ── */}
-          <div className="section-header" style={{ marginTop: 40 }}>
+          <div className="section-header">
+            <div className="section-title">Mood Check</div>
+          </div>
+
+          <CurrentMoodCard
+            user={user}
+            partner={partner}
+            bond={bond}
+            myDisplayNickname={myDisplayNickname}
+            partnerDisplayNickname={partnerDisplayNickname}
+          />
+
+          <div className="section-header">
             <div className="section-title">Words for Each Other</div>
           </div>
+
           <div className="quotes-grid">
             <QuoteCard
               quote={bond?.quote1 ?? ""}
@@ -268,21 +695,28 @@ const partnerDisplayNickname =
               placeholder="Leave a quote for your love…"
             />
 
-<QuoteCard
-  quote={bond?.quote2 ?? ""}
-  field="quote2"
-  bondId={user?.bondId}
-  avatar={partner?.avatar ?? "🌸"}
-  nickname={partnerDisplayNickname}
-  placeholder="Waiting for their words…"
-/>
+            <QuoteCard
+              quote={bond?.quote2 ?? ""}
+              field="quote2"
+              bondId={user?.bondId}
+              avatar={partner?.avatar ?? "🌸"}
+              nickname={partnerDisplayNickname}
+              placeholder="Waiting for their words…"
+            />
           </div>
 
-          {/* ── Footer ── */}
           <div className="dash-footer">
-            <div style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 300, marginBottom: 8 }}>
+            <div
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: 28,
+                fontWeight: 300,
+                marginBottom: 8,
+              }}
+            >
               Made with love, built for two.
             </div>
+
             <div style={{ color: "var(--muted)", fontSize: 13 }}>
               AuroraBond — your shared emotional universe
             </div>

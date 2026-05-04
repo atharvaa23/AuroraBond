@@ -71,6 +71,13 @@ export interface Bond {
   quote2?: string;
   nicknames?: Record<string, string>;
   weatherCities?: Record<string, string>;
+  currentMoods?: Record<
+    string,
+    {
+      emoji: string;
+      label: string;
+    }
+  >;
 }
 
 // ─── Page / Navigation Types ───────────────────────────────────────────────
@@ -83,7 +90,8 @@ export type PageKey =
   | "movies"
   | "chat"
   | "story"
-  | "settings";
+  | "settings"
+  | "games";
 
 // ─── App State (top-level shape) ───────────────────────────────────────────
 

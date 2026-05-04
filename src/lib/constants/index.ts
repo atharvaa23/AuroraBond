@@ -56,6 +56,13 @@ export const DASHBOARD_CARDS = [
   { icon: "🎬", tag: "Together", title: "Movie Vault", desc: "Your watchlist, your memories, your cinematic journey.", page: "movies" },
   { icon: "💬", tag: "Always", title: "Chat", desc: "Soft messages, floating thoughts, words that feel like a hug.", page: "chat" },
   { icon: "📖", tag: "Forever", title: "Our Story", desc: "Every chapter of your love story, beautifully preserved.", page: "story" },
+  {
+    page: "games",
+    icon: "🎮",
+    tag: "❤️",
+    title: "Game Scores",
+    desc: "Keep score of every tiny competition between you two.",
+  },
 ] as const;
 
 // ─── Petal Animation Data ──────────────────────────────────────────────────
