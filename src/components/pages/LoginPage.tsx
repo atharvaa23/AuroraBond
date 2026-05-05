@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth";
 import {
   doc,
   setDoc,
@@ -160,6 +165,8 @@ export function LoginPage({ setPage, setUser, setPartner }: LoginPageProps) {
 
   const handleGoogleLogin = async () => {
     try {
+      await setPersistence(auth, browserLocalPersistence);
+
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
