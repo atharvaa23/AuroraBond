@@ -122,8 +122,8 @@ const DASH_CSS = `
     border-radius: 50%;
     background: linear-gradient(
       135deg,
-      rgba(192, 132, 252, 0.3),
-      rgba(251, 113, 133, 0.2)
+      color-mix(in srgb, var(--aurora1) 30%, transparent),
+      color-mix(in srgb, var(--aurora3) 22%, transparent)
     );
     animation: orb 4s ease-in-out infinite;
     display: flex;
@@ -138,7 +138,7 @@ const DASH_CSS = `
     content: "";
     position: absolute;
     border-radius: 50%;
-    border: 1px solid rgba(192, 132, 252, 0.3);
+    border: 1px solid color-mix(in srgb, var(--aurora1) 30%, transparent);
     animation: pulseRing 3s ease-out infinite;
     width: 100%;
     height: 100%;
@@ -199,7 +199,7 @@ const DASH_CSS = `
     background: linear-gradient(
       135deg,
       transparent 0%,
-      rgba(192, 132, 252, 0.05) 100%
+      color-mix(in srgb, var(--aurora1) 5%, transparent) 100%
     );
     opacity: 0;
     transition: opacity 0.4s;
@@ -356,7 +356,7 @@ const DASH_CSS = `
 
   .mood-chip:hover {
     border-color: var(--aurora1);
-    background: rgba(192, 132, 252, 0.1);
+    background: color-mix(in srgb, var(--aurora1) 10%, transparent);
     transform: translateY(-1px);
   }
 
@@ -364,8 +364,8 @@ const DASH_CSS = `
     border-color: var(--aurora1);
     background: linear-gradient(
       135deg,
-      rgba(192, 132, 252, 0.24),
-      rgba(251, 113, 133, 0.14)
+      color-mix(in srgb, var(--aurora1) 24%, transparent),
+      color-mix(in srgb, var(--aurora3) 14%, transparent)
     );
     color: white;
   }
@@ -449,15 +449,23 @@ const DASH_CSS = `
     font-size: 12px;
     transition: all 0.3s;
     font-family: var(--font-sans);
+    margin-top: 12px;
   }
 
   .quote-save-btn:hover {
-    background: rgba(192, 132, 252, 0.1);
+    background: color-mix(in srgb, var(--aurora1) 10%, transparent);
   }
 
   .quote-save-btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+  }
+
+  .quote-readonly-note {
+    margin-top: 12px;
+    color: var(--muted2);
+    font-size: 12px;
+    font-style: italic;
   }
 
   .dash-footer {
@@ -468,26 +476,25 @@ const DASH_CSS = `
   }
 
   .dash-footer-quote {
-     max-width: 700px;
-  margin: 0 auto 22px;
-  color: var(--muted);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.9;
-  letter-spacing: 0.2px;
+    max-width: 700px;
+    margin: 0 auto 22px;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.9;
+    letter-spacing: 0.2px;
   }
 
   .dash-footer-links {
     display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 30px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
   }
 
   .dash-footer-link {
-
     border: none;
     background: transparent;
     color: var(--muted2);
@@ -504,8 +511,8 @@ const DASH_CSS = `
 
   .dash-footer-made {
     color: var(--muted);
-  font-size: 13px;
-  letter-spacing: 0.4px;
+    font-size: 13px;
+    letter-spacing: 0.4px;
   }
 
   .dash-footer-made span {
@@ -513,14 +520,14 @@ const DASH_CSS = `
   }
 
   .dash-footer-brand {
-   margin-top: 6px;
-  color: var(--muted2);
-  font-size: 12px;
+    margin-top: 6px;
+    color: var(--muted2);
+    font-size: 12px;
   }
 
-  @media (max-width: 640px) {
+    @media (max-width: 640px) {
     .dash-wrap {
-      padding: 112px 20px 130px;
+      padding: 112px 20px 118px;
     }
 
     .dash-hero {
@@ -550,6 +557,39 @@ const DASH_CSS = `
     .mood-card,
     .quote-card {
       padding: 22px;
+    }
+
+    .dash-footer {
+      margin-top: 34px;
+      padding-top: 20px;
+    }
+
+    .dash-footer-quote {
+      max-width: 94%;
+      margin: 0 auto 12px;
+      font-size: 11px;
+      line-height: 1.55;
+      letter-spacing: 0;
+    }
+
+    .dash-footer-links {
+      gap: 12px;
+      row-gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .dash-footer-link {
+      font-size: 10px;
+    }
+
+    .dash-footer-made {
+      font-size: 10.8px;
+      letter-spacing: 0.15px;
+    }
+
+    .dash-footer-brand {
+      margin-top: 3px;
+      font-size: 9.8px;
     }
   }
 `;
@@ -667,6 +707,7 @@ interface QuoteCardProps {
   avatar: string;
   nickname: string;
   placeholder: string;
+  canEdit: boolean;
 }
 
 function QuoteCard({
@@ -676,6 +717,7 @@ function QuoteCard({
   avatar,
   nickname,
   placeholder,
+  canEdit,
 }: QuoteCardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(quote);
@@ -688,7 +730,7 @@ function QuoteCard({
   }, [quote, editing]);
 
   const save = async () => {
-    if (!bondId) return;
+    if (!bondId || !canEdit) return;
 
     try {
       setSaving(true);
@@ -723,13 +765,19 @@ function QuoteCard({
             )}
           </div>
 
-          <button
-            className="quote-save-btn"
-            type="button"
-            onClick={() => setEditing(true)}
-          >
-            Edit
-          </button>
+          {canEdit ? (
+            <button
+              className="quote-save-btn"
+              type="button"
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </button>
+          ) : (
+            <div className="quote-readonly-note">
+              Only they can edit this note.
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -790,6 +838,22 @@ export function DashboardPage({
     partner?.name,
     "Partner"
   );
+
+  const isCurrentUserUser1 = bond?.user1Uid === currentUid;
+
+  const myQuoteField: "quote1" | "quote2" = isCurrentUserUser1
+    ? "quote1"
+    : "quote2";
+
+  const partnerQuoteField: "quote1" | "quote2" = isCurrentUserUser1
+    ? "quote2"
+    : "quote1";
+
+  const myQuote =
+    myQuoteField === "quote1" ? bond?.quote1 ?? "" : bond?.quote2 ?? "";
+
+  const partnerQuote =
+    partnerQuoteField === "quote1" ? bond?.quote1 ?? "" : bond?.quote2 ?? "";
 
   const footerQuote =
     FOOTER_QUOTES[new Date().getDate() % FOOTER_QUOTES.length];
@@ -879,21 +943,23 @@ export function DashboardPage({
 
           <div className="quotes-grid">
             <QuoteCard
-              quote={bond?.quote1 ?? ""}
-              field="quote1"
+              quote={myQuote}
+              field={myQuoteField}
               bondId={user?.bondId}
               avatar={user?.avatar ?? "💜"}
               nickname={myDisplayNickname}
               placeholder="Leave a quote for your love…"
+              canEdit={true}
             />
 
             <QuoteCard
-              quote={bond?.quote2 ?? ""}
-              field="quote2"
+              quote={partnerQuote}
+              field={partnerQuoteField}
               bondId={user?.bondId}
               avatar={partner?.avatar ?? "🌸"}
               nickname={partnerDisplayNickname}
               placeholder="Waiting for their words…"
+              canEdit={false}
             />
           </div>
 

@@ -627,14 +627,27 @@ const CHAT_CSS = `
     transform: translateX(1px);
   }
 
-  @media (max-width: 640px) {
+   @media (max-width: 640px) {
+    .chat-page {
+      min-height: 100svh;
+      height: 100svh;
+      overflow: hidden;
+    }
+
     .chat-shell {
-      padding: 82px 14px 104px;
+      width: 100%;
+      max-width: none;
+      height: 100svh;
+      min-height: 100svh;
+      padding: 78px 0 92px;
+      overflow: hidden;
     }
 
     .chat-header {
+      padding: 0 14px;
       gap: 10px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
     }
 
     .chat-heart-dot {
@@ -649,12 +662,13 @@ const CHAT_CSS = `
 
     .chat-sub {
       font-size: 12px;
+      margin-top: 6px;
     }
 
     .presence-line {
       font-size: 11px;
       padding: 5px 10px;
-      margin-top: 9px;
+      margin-top: 8px;
     }
 
     .clear-chat-btn {
@@ -664,12 +678,28 @@ const CHAT_CSS = `
     }
 
     .chat-card {
-      border-radius: 24px;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+      border-radius: 24px 24px 0 0;
+      box-shadow:
+        0 -8px 35px rgba(0,0,0,0.18),
+        inset 0 1px 0 rgba(255,255,255,0.06);
     }
 
     .chat-messages {
-      padding: 16px 13px 10px;
+      flex: 1;
+      min-height: 0;
+      padding: 16px 13px 12px;
       gap: 6px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
     }
 
     .msg {
@@ -687,8 +717,13 @@ const CHAT_CSS = `
     }
 
     .chat-input-wrap {
-      padding: 10px;
+      flex-shrink: 0;
+      padding: 10px 10px 12px;
       gap: 8px;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.14)),
+        color-mix(in srgb, var(--bg2) 52%, transparent);
+      backdrop-filter: blur(24px);
     }
 
     .chat-composer {
@@ -714,6 +749,7 @@ const CHAT_CSS = `
     }
 
     .emoji-panel {
+      left: 0;
       bottom: 50px;
       width: min(292px, calc(100vw - 42px));
       grid-template-columns: repeat(8, 1fr);
@@ -726,7 +762,7 @@ const CHAT_CSS = `
       height: 28px;
       font-size: 17px;
     }
-  }
+  }    
 `;
 
 export function ChatPage({ user, partner, bond }: ChatPageProps) {
