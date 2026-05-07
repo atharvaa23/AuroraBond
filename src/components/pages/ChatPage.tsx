@@ -1,30 +1,30 @@
 "use client";
 
 import type { Timestamp } from "firebase/firestore";
-import { Fragment, useState, useRef, useEffect } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
   addDoc,
-  serverTimestamp,
-  getDocs,
-  writeBatch,
+  collection,
   doc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { User, Partner, Bond } from "../../lib/types";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 
 interface ChatPageProps {
-  user: (User & { bondId?: string; uid?: string }) | null;
-  partner: (Partner & { uid?: string }) | null;
+  user: User | null;
+  partner: Partner | null;
   bond: Bond | null;
 }
 
-export interface Message {
+interface ChatMessage {
   id: string;
   sender: string;
   text: string;
@@ -39,15 +39,29 @@ interface Presence {
 }
 
 const ONLINE_TIMEOUT = 45 * 1000;
+const TYPING_TIMEOUT = 2500;
+
+const QUICK_EMOJIS = [
+  "🥰",
+  "😭",
+  "😂",
+  "🤍",
+  "💜",
+  "🌸",
+  "✨",
+  "🥺",
+  "🫶",
+  "😘",
+  "😌",
+  "🌙",
+  "⭐",
+  "💌",
+  "🦋",
+  "🫂",
+];
 
 function toDate(value: Timestamp | null | undefined): Date | null {
-  if (!value) return null;
-
-  if (typeof value.toDate === "function") {
-    return value.toDate();
-  }
-
-  return null;
+  return value?.toDate?.() ?? null;
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -63,7 +77,7 @@ function getDateKey(date: Date) {
 }
 
 function getMinuteKey(date: Date) {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
+  return `${getDateKey(date)}-${date.getHours()}-${date.getMinutes()}`;
 }
 
 function getDateLabel(date: Date) {
@@ -90,7 +104,7 @@ function getTimeLabel(date: Date) {
   });
 }
 
-function isPartnerRecentlyOnline(presence: Presence | null) {
+function isRecentlyOnline(presence: Presence | null) {
   if (!presence?.isOnline) return false;
 
   const lastSeenDate = toDate(presence.lastSeen);
@@ -100,36 +114,92 @@ function isPartnerRecentlyOnline(presence: Presence | null) {
 }
 
 const CHAT_CSS = `
-  .chat-outer {
+  .chat-page {
+    min-height: 100dvh;
+  }
+
+  .chat-shell {
+    height: 100dvh;
+    max-width: 980px;
+    padding: 92px 28px 22px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 200px);
   }
 
   .chat-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
   }
 
   .chat-title-wrap {
     flex: 1;
+    min-width: 0;
+  }
+
+  .chat-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .chat-heart-dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,0.2), transparent 35%),
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--aurora1) 24%, transparent),
+        color-mix(in srgb, var(--aurora3) 18%, transparent)
+      );
+    border: 1px solid color-mix(in srgb, var(--aurora1) 26%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--aurora1) 16%, transparent);
+    font-size: 15px;
+  }
+
+  .chat-page-title {
+    font-family: var(--font-serif);
+    font-size: clamp(34px, 5vw, 50px);
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  .chat-page-title span {
+    background: linear-gradient(135deg, var(--aurora1), var(--aurora2), var(--aurora3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .chat-sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
   }
 
   .presence-line {
-    margin-top: 10px;
+    margin-top: 12px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    padding: 7px 13px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--card) 75%, transparent);
     border: 1px solid var(--border);
     color: var(--muted);
     font-size: 12px;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(14px);
   }
 
   .presence-dot {
@@ -137,6 +207,7 @@ const CHAT_CSS = `
     height: 8px;
     border-radius: 50%;
     background: var(--muted2);
+    flex-shrink: 0;
   }
 
   .presence-line.online .presence-dot {
@@ -146,16 +217,17 @@ const CHAT_CSS = `
 
   .presence-line.typing .presence-dot {
     background: var(--aurora1);
-    box-shadow: 0 0 12px rgba(192, 132, 252, 0.8);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--aurora1) 75%, transparent);
   }
 
   .clear-chat-btn {
-    padding: 8px 16px;
+    padding: 8px 15px;
     border-radius: 999px;
-    border: 1px solid rgba(251, 113, 133, 0.45);
+    border: 1px solid rgba(251, 113, 133, 0.42);
     background: rgba(251, 113, 133, 0.08);
     color: #fb7185;
-    font-size: 11px;
+    font-family: var(--font-sans);
+    font-size: 10px;
     letter-spacing: 1px;
     text-transform: uppercase;
     cursor: pointer;
@@ -178,14 +250,33 @@ const CHAT_CSS = `
     box-shadow: none;
   }
 
-  .chat-messages {
+  .chat-card {
     flex: 1;
-    overflow-y: auto;
-    padding: 20px 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    background:
+      radial-gradient(circle at 18% 8%, color-mix(in srgb, var(--aurora1) 9%, transparent), transparent 32%),
+      radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--aurora3) 8%, transparent), transparent 34%),
+      color-mix(in srgb, var(--card) 78%, transparent);
+    backdrop-filter: blur(24px);
+    box-shadow:
+      0 22px 70px rgba(0,0,0,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1;
     min-height: 0;
+    overflow-y: auto;
+    padding: 22px 22px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    scroll-behavior: smooth;
   }
 
   .chat-messages::-webkit-scrollbar {
@@ -201,6 +292,14 @@ const CHAT_CSS = `
     border-radius: 2px;
   }
 
+  .chat-empty {
+    text-align: center;
+    color: var(--muted);
+    margin: auto;
+    line-height: 1.7;
+    font-size: 13px;
+  }
+
   .chat-date-divider {
     display: flex;
     justify-content: center;
@@ -210,11 +309,12 @@ const CHAT_CSS = `
   .chat-date-divider span {
     padding: 6px 14px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.075);
     border: 1px solid var(--border);
     color: var(--muted);
     font-size: 11px;
     letter-spacing: 1px;
+    backdrop-filter: blur(14px);
   }
 
   .chat-time-divider {
@@ -222,75 +322,76 @@ const CHAT_CSS = `
     color: var(--muted2);
     font-size: 10px;
     margin: 8px 0;
-    opacity: 0.8;
+    opacity: 0.85;
   }
 
-.msg-row {
-  width: 100%;
-  display: flex;
-  margin-bottom: 6px;
-}
+  .msg-row {
+    width: 100%;
+    display: flex;
+    margin-bottom: 5px;
+  }
 
-.msg-row.mine {
-  justify-content: flex-end;
-}
+  .msg-row.mine {
+    justify-content: flex-end;
+  }
 
-.msg-row.theirs {
-  justify-content: flex-start;
-}
+  .msg-row.theirs {
+    justify-content: flex-start;
+  }
 
-.msg {
-  max-width: 70%;
-  display: flex;
-  flex-direction: column;
-}
+  .msg {
+    max-width: min(72%, 560px);
+    display: flex;
+    flex-direction: column;
+  }
 
-.msg.mine {
-  align-items: flex-end;
-}
+  .msg.mine {
+    align-items: flex-end;
+  }
 
-.msg.theirs {
-  align-items: flex-start;
-}
-
-.msg.mine .msg-bubble {
-  border-bottom-right-radius: 6px;
-}
-
-.msg.theirs .msg-bubble {
-  border-bottom-left-radius: 6px;
-}
+  .msg.theirs {
+    align-items: flex-start;
+  }
 
   .partner-label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
-    margin-bottom: 4px;
+    margin-bottom: 5px;
     display: flex;
     align-items: center;
     gap: 6px;
+    padding-left: 4px;
   }
 
   .msg-bubble {
-    padding: 12px 18px;
-    border-radius: 18px;
+    padding: 12px 17px;
+    border-radius: 20px;
     font-size: 14px;
     line-height: 1.6;
     backdrop-filter: blur(20px);
     word-break: break-word;
+    overflow-wrap: anywhere;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.12);
   }
 
   .msg.mine .msg-bubble {
-    background: linear-gradient(
-      135deg,
-      rgba(192,132,252,0.3),
-      rgba(251,113,133,0.2)
-    );
-    border: 1px solid rgba(192,132,252,0.3);
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,0.16), transparent 28%),
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--aurora1) 34%, transparent),
+        color-mix(in srgb, var(--aurora3) 24%, transparent)
+      );
+    border: 1px solid color-mix(in srgb, var(--aurora1) 32%, transparent);
+    border-bottom-right-radius: 7px;
   }
 
   .msg.theirs .msg-bubble {
-    background: var(--card);
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,0.08), transparent 28%),
+      color-mix(in srgb, var(--card) 92%, transparent);
     border: 1px solid var(--border);
+    border-bottom-left-radius: 7px;
   }
 
   .typing-row {
@@ -335,6 +436,7 @@ const CHAT_CSS = `
       transform: translateY(0);
       opacity: 0.45;
     }
+
     40% {
       transform: translateY(-4px);
       opacity: 1;
@@ -342,121 +444,358 @@ const CHAT_CSS = `
   }
 
   .chat-input-wrap {
-    padding: 16px 0;
+    position: relative;
+    padding: 14px;
     border-top: 1px solid var(--border);
     display: flex;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
+    background:
+      linear-gradient(180deg, transparent, rgba(0,0,0,0.08)),
+      color-mix(in srgb, var(--bg2) 24%, transparent);
+  }
+
+  .chat-composer {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 10% 50%, color-mix(in srgb, var(--aurora1) 8%, transparent), transparent 25%),
+      rgba(255,255,255,0.045);
+    padding: 6px 8px;
+    transition: all 0.25s ease;
+  }
+
+  .chat-composer:focus-within {
+    border-color: var(--aurora1);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--aurora1) 16%, transparent);
+    background: rgba(255,255,255,0.06);
+  }
+
+  .emoji-toggle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--aurora2) 11%, transparent);
+    color: var(--text);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 17px;
+    transition: all 0.22s ease;
+    flex-shrink: 0;
+  }
+
+  .emoji-toggle:hover,
+  .emoji-toggle.active {
+    border-color: color-mix(in srgb, var(--aurora1) 30%, transparent);
+    background: color-mix(in srgb, var(--aurora1) 16%, transparent);
+    transform: translateY(-1px) scale(1.04);
   }
 
   .chat-input {
     flex: 1;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
+    min-width: 0;
+    background: transparent;
+    border: none;
     color: var(--text);
-    padding: 12px 20px;
+    padding: 8px 6px;
     font-family: var(--font-sans);
     font-size: 14px;
     outline: none;
-    transition: all 0.3s;
-  }
-
-  .chat-input:focus {
-    border-color: var(--aurora1);
   }
 
   .chat-input::placeholder {
     color: var(--muted2);
   }
 
-  .chat-send {
-    background: linear-gradient(135deg, var(--aurora1), var(--aurora3));
-    color: white;
+  .emoji-panel {
+    position: absolute;
+    left: 0;
+    bottom: 54px;
+    width: min(310px, calc(100vw - 64px));
+    padding: 12px;
+    border-radius: 22px;
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(circle at 20% 15%, color-mix(in srgb, var(--aurora1) 12%, transparent), transparent 34%),
+      color-mix(in srgb, var(--bg2) 88%, black);
+    backdrop-filter: blur(24px);
+    box-shadow: 0 18px 55px rgba(0,0,0,0.34);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    z-index: 20;
+    animation: emojiPop 0.18s ease both;
+  }
+
+  @keyframes emojiPop {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .emoji-choice {
+    width: 30px;
+    height: 30px;
     border: none;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+    border-radius: 11px;
+    background: transparent;
     cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
+    font-size: 18px;
+    transition: all 0.18s ease;
+  }
+
+  .emoji-choice:hover {
+    background: color-mix(in srgb, var(--aurora1) 15%, transparent);
+    transform: translateY(-1px) scale(1.12);
+  }
+
+  .chat-send {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--aurora1) 38%, transparent);
+    background:
+      radial-gradient(circle at 28% 22%, rgba(255,255,255,0.32), transparent 28%),
+      linear-gradient(135deg, var(--aurora1), var(--aurora2), var(--aurora3));
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    display: grid;
+    place-items: center;
+    transition: all 0.25s ease;
     flex-shrink: 0;
+    box-shadow:
+      0 0 20px color-mix(in srgb, var(--aurora1) 22%, transparent),
+      0 10px 24px rgba(0,0,0,0.18);
+    overflow: hidden;
+  }
+
+  .chat-send::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: linear-gradient(
+      120deg,
+      transparent,
+      rgba(255,255,255,0.36),
+      transparent
+    );
+    transform: translateX(-70%) rotate(20deg);
+    transition: transform 0.45s ease;
+  }
+
+  .chat-send:hover::before {
+    transform: translateX(70%) rotate(20deg);
   }
 
   .chat-send:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 20px rgba(192,132,252,0.4);
+    transform: translateY(-2px) scale(1.06);
+    box-shadow:
+      0 0 26px color-mix(in srgb, var(--aurora1) 32%, transparent),
+      0 14px 30px rgba(0,0,0,0.22);
+  }
+
+  .chat-send:active {
+    transform: scale(0.96);
+  }
+
+  .chat-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .chat-send span {
+    position: relative;
+    z-index: 1;
+    transform: translateX(1px);
   }
 
   @media (max-width: 640px) {
+    .chat-shell {
+      padding: 82px 14px 104px;
+    }
+
     .chat-header {
-      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .chat-heart-dot {
+      width: 30px;
+      height: 30px;
+      font-size: 13px;
+    }
+
+    .chat-page-title {
+      font-size: 34px;
+    }
+
+    .chat-sub {
+      font-size: 12px;
+    }
+
+    .presence-line {
+      font-size: 11px;
+      padding: 5px 10px;
+      margin-top: 9px;
     }
 
     .clear-chat-btn {
-      padding: 7px 12px;
-      font-size: 10px;
+      padding: 7px 10px;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+    }
+
+    .chat-card {
+      border-radius: 24px;
+    }
+
+    .chat-messages {
+      padding: 16px 13px 10px;
+      gap: 6px;
     }
 
     .msg {
-      max-width: 82%;
+      max-width: 84%;
+    }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .partner-label {
+      font-size: 11px;
+    }
+
+    .chat-input-wrap {
+      padding: 10px;
+      gap: 8px;
+    }
+
+    .chat-composer {
+      padding: 5px 7px;
+      gap: 6px;
+    }
+
+    .emoji-toggle {
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+    }
+
+    .chat-input {
+      padding: 7px 4px;
+      font-size: 13px;
+    }
+
+    .chat-send {
+      width: 42px;
+      height: 42px;
+      font-size: 16px;
+    }
+
+    .emoji-panel {
+      bottom: 50px;
+      width: min(292px, calc(100vw - 42px));
+      grid-template-columns: repeat(8, 1fr);
+      padding: 10px;
+      border-radius: 20px;
+    }
+
+    .emoji-choice {
+      width: 28px;
+      height: 28px;
+      font-size: 17px;
     }
   }
 `;
 
 export function ChatPage({ user, partner, bond }: ChatPageProps) {
   const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [clearing, setClearing] = useState(false);
   const [partnerPresence, setPartnerPresence] = useState<Presence | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bondId = user?.bondId;
   const currentUid = auth.currentUser?.uid || user?.uid;
-  console.log("CHAT DEBUG:", {
-    authUid: auth.currentUser?.uid,
-    userUid: user?.uid,
-    currentUid,
-    bondId,
-    bondUser1Uid: bond?.user1Uid,
-    bondUser2Uid: bond?.user2Uid,
-    isUser1: currentUid === bond?.user1Uid,
-    isUser2: currentUid === bond?.user2Uid,
-  });
-  const partnerDisplayNickname =
-    bond?.nicknames?.[partner?.uid || ""] || partner?.nickname || "Partner";
 
-  const partnerOnline = isPartnerRecentlyOnline(partnerPresence);
+  const partnerUid =
+    bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
+
+  const partnerDisplayNickname =
+    bond?.nicknames?.[partnerUid || ""] || partner?.nickname || "Partner";
+
+  const partnerOnline = isRecentlyOnline(partnerPresence);
   const partnerTyping = Boolean(partnerPresence?.typing) && partnerOnline;
+
+  const writePresence = async (updates: Partial<Presence>) => {
+    if (!bondId || !currentUid) return;
+
+    await setDoc(
+      doc(db, "bonds", bondId, "presence", currentUid),
+      {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  };
+
+  const updateTypingStatus = (typing: boolean) => {
+    writePresence({
+      isOnline: true,
+      typing,
+      lastSeen: serverTimestamp() as unknown as Timestamp,
+    }).catch(() => { });
+  };
 
   useEffect(() => {
     if (!bondId) return;
 
-    const q = query(
+    const messagesQuery = query(
       collection(db, "bonds", bondId, "messages"),
       orderBy("createdAt", "asc")
     );
 
     const unsub = onSnapshot(
-      q,
+      messagesQuery,
       (snap) => {
-        const msgs = snap.docs.map((doc) => {
-          const data = doc.data();
+        const nextMessages = snap.docs.map((messageDoc) => {
+          const data = messageDoc.data();
 
           return {
-            id: doc.id,
+            id: messageDoc.id,
             sender: data.sender || "",
             text: data.text || "",
             createdAt: data.createdAt || null,
           };
-        }) as Message[];
+        }) as ChatMessage[];
 
-        setMessages(msgs);
+        setMessages(nextMessages);
       },
       (error) => {
         console.error("Chat messages listener error:", error);
@@ -467,114 +806,38 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
   }, [bondId]);
 
   useEffect(() => {
-    if (!bondId || !currentUid) return;
+    if (!bondId || !partnerUid) return;
 
-    const presenceRef = doc(db, "bonds", bondId, "presence", currentUid);
+    const partnerPresenceRef = doc(db, "bonds", bondId, "presence", partnerUid);
 
-    const setOnline = async () => {
-      await setDoc(
-        presenceRef,
-        {
-          isOnline: true,
-          typing: false,
-          lastSeen: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-    };
-
-    const setOffline = () => {
-      setDoc(
-        presenceRef,
-        {
-          isOnline: false,
-          typing: false,
-          lastSeen: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      ).catch(() => { });
-    };
-
-    setOnline();
-
-    const heartbeat = window.setInterval(() => {
-      setDoc(
-        presenceRef,
-        {
-          isOnline: true,
-          lastSeen: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      ).catch(() => { });
-    }, 20000);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        setOnline();
-      } else {
-        setDoc(
-          presenceRef,
-          {
-            typing: false,
-            lastSeen: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ).catch(() => { });
+    const unsub = onSnapshot(
+      partnerPresenceRef,
+      (snap) => {
+        setPartnerPresence(snap.exists() ? (snap.data() as Presence) : null);
+      },
+      (error) => {
+        console.error("Partner presence listener error:", error);
       }
-    };
-
-    window.addEventListener("beforeunload", setOffline);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.clearInterval(heartbeat);
-      window.removeEventListener("beforeunload", setOffline);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      setOffline();
-    };
-  }, [bondId, currentUid]);
-
-  useEffect(() => {
-    if (!bondId || !partner?.uid) return;
-
-    const partnerPresenceRef = doc(db, "bonds", bondId, "presence", partner.uid);
-
-    const unsub = onSnapshot(partnerPresenceRef, (snap) => {
-      if (!snap.exists()) {
-        setPartnerPresence(null);
-        return;
-      }
-
-      setPartnerPresence(snap.data() as Presence);
-    });
+    );
 
     return unsub;
-  }, [bondId, partner?.uid]);
+  }, [bondId, partnerUid]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, partnerTyping]);
 
-  const updateTypingStatus = (typing: boolean) => {
-    if (!bondId || !currentUid) return;
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
 
-    const presenceRef = doc(db, "bonds", bondId, "presence", currentUid);
-
-    setDoc(
-      presenceRef,
-      {
-        isOnline: true,
-        typing,
-        lastSeen: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    ).catch(() => { });
-  };
+      updateTypingStatus(false);
+    };
+    // Only run on unmount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDraftChange = (value: string) => {
     setDraft(value);
@@ -590,8 +853,24 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
     if (hasText) {
       typingTimeoutRef.current = setTimeout(() => {
         updateTypingStatus(false);
-      }, 2500);
+      }, TYPING_TIMEOUT);
     }
+  };
+
+  const insertEmoji = (emoji: string) => {
+    const input = inputRef.current;
+    const start = input?.selectionStart ?? draft.length;
+    const end = input?.selectionEnd ?? draft.length;
+
+    const nextValue = `${draft.slice(0, start)}${emoji}${draft.slice(end)}`;
+
+    handleDraftChange(nextValue);
+
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      const nextCursor = start + emoji.length;
+      inputRef.current?.setSelectionRange(nextCursor, nextCursor);
+    });
   };
 
   const send = async () => {
@@ -606,10 +885,12 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
     });
 
     setDraft("");
+    setShowEmojiPicker(false);
     updateTypingStatus(false);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
     }
   };
 
@@ -622,8 +903,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
     try {
       setClearing(true);
 
-      const messagesRef = collection(db, "bonds", bondId, "messages");
-      const snap = await getDocs(messagesRef);
+      const snap = await getDocs(collection(db, "bonds", bondId, "messages"));
 
       if (snap.empty) return;
 
@@ -647,16 +927,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
       <div className="page">
         <div className="inner-wrap">
           <div className="page-title">Chat</div>
-
-          <div
-            style={{
-              color: "var(--muted)",
-              marginTop: 40,
-              textAlign: "center",
-            }}
-          >
-            No bond connected yet ✨
-          </div>
+          <div className="chat-empty">No bond connected yet ✨</div>
         </div>
       </div>
     );
@@ -666,26 +937,22 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
     <>
       <style>{CHAT_CSS}</style>
 
-      <div className="page" style={{ height: "100vh" }}>
+      <div className="page chat-page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
-        <div
-          className="inner-wrap"
-          style={{
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            paddingBottom: 20,
-          }}
-        >
+        <div className="chat-shell">
           <div className="chat-header">
             <div className="chat-title-wrap">
-              <div className="page-title">
-                Chat <span>∞</span>
+              <div className="chat-title-row">
+                <div className="chat-heart-dot">💬</div>
+
+                <div className="chat-page-title">
+                  Chat <span>∞</span>
+                </div>
               </div>
 
-              <div className="page-sub" style={{ marginBottom: 0 }}>
+              <div className="chat-sub">
                 Soft words that travel any distance.
               </div>
 
@@ -694,6 +961,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
                   }`}
               >
                 <span className="presence-dot" />
+
                 {partnerTyping
                   ? `${partnerDisplayNickname} is typing...`
                   : partnerOnline
@@ -704,6 +972,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
 
             <button
               className="clear-chat-btn"
+              type="button"
               onClick={clearChat}
               disabled={clearing || messages.length === 0}
             >
@@ -711,24 +980,18 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
             </button>
           </div>
 
-          <div className="chat-outer">
+          <div className="chat-card">
             <div className="chat-messages">
               {messages.length === 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    color: "var(--muted)",
-                    marginTop: 40,
-                  }}
-                >
+                <div className="chat-empty">
                   Start your first conversation ✨
                 </div>
               )}
 
-              {messages.map((m, index) => {
-                const isMine = m.sender === currentUid;
+              {messages.map((message, index) => {
+                const isMine = message.sender === currentUid;
 
-                const currentDate = toDate(m.createdAt);
+                const currentDate = toDate(message.createdAt);
                 const previousDate = toDate(messages[index - 1]?.createdAt);
 
                 const showDateDivider =
@@ -742,7 +1005,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
                     getMinuteKey(currentDate) !== getMinuteKey(previousDate));
 
                 return (
-                  <Fragment key={m.id}>
+                  <Fragment key={message.id}>
                     {showDateDivider && (
                       <div className="chat-date-divider">
                         <span>{getDateLabel(currentDate)}</span>
@@ -764,7 +1027,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
                           </div>
                         )}
 
-                        <div className="msg-bubble">{m.text}</div>
+                        <div className="msg-bubble">{message.text}</div>
                       </div>
                     </div>
                   </Fragment>
@@ -774,6 +1037,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
               {partnerTyping && (
                 <div className="typing-row">
                   <span>{partner?.avatar ?? "🌸"}</span>
+
                   <div className="typing-bubble">
                     <span />
                     <span />
@@ -786,18 +1050,55 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
             </div>
 
             <div className="chat-input-wrap">
-              <input
-                className="chat-input"
-                placeholder="Write something beautiful…"
-                value={draft}
-                onChange={(e) => handleDraftChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") send();
-                }}
-              />
+              <div className="chat-composer">
+                <button
+                  className={`emoji-toggle ${showEmojiPicker ? "active" : ""}`}
+                  type="button"
+                  onClick={() => setShowEmojiPicker((current) => !current)}
+                  aria-label="Open emoji picker"
+                >
+                  😊
+                </button>
 
-              <button className="chat-send" onClick={send}>
-                ↑
+                <input
+                  ref={inputRef}
+                  className="chat-input"
+                  placeholder="Write something beautiful…"
+                  value={draft}
+                  onChange={(event) => handleDraftChange(event.target.value)}
+                  onFocus={() => {
+                    if (draft.trim()) updateTypingStatus(true);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") send();
+                    if (event.key === "Escape") setShowEmojiPicker(false);
+                  }}
+                />
+
+                {showEmojiPicker && (
+                  <div className="emoji-panel">
+                    {QUICK_EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        className="emoji-choice"
+                        type="button"
+                        onClick={() => insertEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="chat-send"
+                type="button"
+                onClick={send}
+                disabled={!draft.trim()}
+                aria-label="Send message"
+              >
+                <span>➤</span>
               </button>
             </div>
           </div>

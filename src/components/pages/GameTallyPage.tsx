@@ -14,7 +14,7 @@ import {
     updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import type { User, Partner, Bond } from "../../lib/types";
 
 interface GameTallyPageProps {
@@ -27,6 +27,21 @@ interface GameCounter {
     id: string;
     title: string;
     scores: Record<string, number>;
+}
+
+function cleanText(value?: string | null) {
+    return value?.replace(/\s+/g, " ").trim() ?? "";
+}
+
+function getDisplayName(
+    nickname?: string | null,
+    name?: string | null,
+    fallback = "You"
+) {
+    const cleanNickname = cleanText(nickname);
+    const cleanName = cleanText(name);
+
+    return cleanNickname || cleanName || fallback;
 }
 
 const GAME_CSS = `
@@ -224,11 +239,17 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
     const partnerUid =
         bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
 
-    const myDisplayNickname =
-        bond?.nicknames?.[currentUid || ""] || user?.nickname || "You";
+    const myDisplayNickname = getDisplayName(
+        bond?.nicknames?.[currentUid || ""],
+        user?.name,
+        "You"
+    );
 
-    const partnerDisplayNickname =
-        bond?.nicknames?.[partnerUid || ""] || partner?.nickname || "Partner";
+    const partnerDisplayNickname = getDisplayName(
+        bond?.nicknames?.[partnerUid || ""],
+        partner?.name,
+        "Partner"
+    );
 
     useEffect(() => {
         if (!bondId) return;
@@ -256,9 +277,17 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
     }, [bondId]);
 
     const addGame = async () => {
-        const title = gameName.trim();
+        const title = cleanText(gameName);
 
-        if (!title || !bondId || !currentUid) return;
+        if (!title) {
+            alert("Please enter a game name first.");
+            return;
+        }
+
+        if (!bondId || !currentUid) {
+            alert("No bond connected yet.");
+            return;
+        }
 
         await addDoc(collection(db, "bonds", bondId, "gameTallies"), {
             title,
@@ -320,7 +349,7 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
 
             <div className="page">
                 <div className="aurora-bg" />
-                <PetalCanvas />
+                <ThemeBackdrop />
 
                 <div className="game-wrap">
                     <div className="page-title">
@@ -343,7 +372,11 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
                                 placeholder="Add a game, e.g. Badminton, Chess, Ludo..."
                             />
 
-                            <button className="game-add-btn" onClick={addGame}>
+                            <button
+                                className="game-add-btn"
+                                type="button"
+                                onClick={addGame}
+                            >
                                 Add Counter
                             </button>
                         </div>
@@ -386,6 +419,7 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
                                         <div className="score-actions">
                                             <button
                                                 className="score-btn"
+                                                type="button"
                                                 onClick={() => changeScore(game.id, currentUid, 1)}
                                             >
                                                 +1 {myDisplayNickname}
@@ -393,6 +427,7 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
 
                                             <button
                                                 className="score-btn"
+                                                type="button"
                                                 disabled={!partnerUid}
                                                 onClick={() => partnerUid && changeScore(game.id, partnerUid, 1)}
                                             >
@@ -401,6 +436,7 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
 
                                             <button
                                                 className="score-btn"
+                                                type="button"
                                                 onClick={() => changeScore(game.id, currentUid, -1)}
                                             >
                                                 -1 {myDisplayNickname}
@@ -408,18 +444,24 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
 
                                             <button
                                                 className="score-btn"
+                                                type="button"
                                                 disabled={!partnerUid}
                                                 onClick={() => partnerUid && changeScore(game.id, partnerUid, -1)}
                                             >
                                                 -1 {partnerDisplayNickname}
                                             </button>
 
-                                            <button className="score-btn" onClick={() => resetGame(game.id)}>
+                                            <button
+                                                className="score-btn"
+                                                type="button"
+                                                onClick={() => resetGame(game.id)}
+                                            >
                                                 Reset
                                             </button>
 
                                             <button
                                                 className="score-btn danger"
+                                                type="button"
                                                 onClick={() => deleteGame(game.id)}
                                             >
                                                 Delete

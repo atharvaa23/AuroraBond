@@ -1,5 +1,7 @@
-// ─── Core Entity Types ─────────────────────────────────────────────────────
 import type { Timestamp } from "firebase/firestore";
+
+// ─── Core Entity Types ─────────────────────────────────────────────────────
+
 export interface User {
   uid?: string;
   name: string;
@@ -10,9 +12,13 @@ export interface User {
   email?: string;
   bondId?: string;
 
+  // Kept for compatibility, but real online/typing status should use:
+  // bonds/{bondId}/presence/{uid}
   online?: boolean;
   lastSeen?: Timestamp | null;
+
   createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
 }
 
 export interface Partner {
@@ -25,8 +31,47 @@ export interface Partner {
   email?: string;
   bondId?: string;
 
+  // Kept for compatibility, but real online/typing status should use:
+  // bonds/{bondId}/presence/{uid}
   online?: boolean;
   lastSeen?: Timestamp | null;
+
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
+}
+
+export interface BondMood {
+  emoji: string;
+  label: string;
+}
+
+export interface Bond {
+  user1Uid?: string;
+  user2Uid?: string | null;
+  code?: string;
+
+  reunionDate?: string;
+  quote1?: string;
+  quote2?: string;
+
+  theme?: ThemeKey;
+
+  nicknames?: Record<string, string>;
+  weatherCities?: Record<string, string>;
+  currentMoods?: Record<string, BondMood>;
+}
+
+export interface Presence {
+  isOnline?: boolean;
+  typing?: boolean;
+  lastSeen?: Timestamp | null;
+  updatedAt?: Timestamp | null;
+}
+
+export interface Message {
+  id: string;
+  sender: string;
+  text: string;
   createdAt?: Timestamp | null;
 }
 
@@ -38,7 +83,7 @@ export interface Movie {
   emoji: string;
   watched: boolean;
   rating: number;
-  createdAt?: any;
+  createdAt?: Timestamp | null;
 }
 
 export interface StoryEvent {
@@ -47,12 +92,6 @@ export interface StoryEvent {
   emoji: string;
   title: string;
   desc: string;
-}
-
-export interface Message {
-  id: string;
-  sender: string;
-  text: string;
   createdAt?: Timestamp | null;
 }
 
@@ -63,21 +102,41 @@ export interface WeatherData {
   humidity: number;
   wind: number;
 }
-export interface Bond {
-  user1Uid?: string;
-  user2Uid?: string | null;
-  reunionDate?: string;
-  quote1?: string;
-  quote2?: string;
-  nicknames?: Record<string, string>;
-  weatherCities?: Record<string, string>;
-  currentMoods?: Record<
-    string,
-    {
-      emoji: string;
-      label: string;
-    }
-  >;
+
+export interface GameCounter {
+  id: string;
+  title: string;
+  scores: Record<string, number>;
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
+}
+
+export interface MusicLink {
+  id: string;
+  title: string;
+  url: string;
+  type: string;
+  note?: string;
+  addedBy: string;
+  createdAt?: Timestamp | null;
+}
+
+export interface MemoryItem {
+  id: string;
+  text: string;
+  createdBy: string;
+  authorName: string;
+  authorAvatar: string;
+  createdAt?: Timestamp | null;
+}
+
+export interface BucketItem {
+  id: string;
+  text: string;
+  done: boolean;
+  createdBy: string;
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
 }
 
 // ─── Page / Navigation Types ───────────────────────────────────────────────
@@ -92,29 +151,37 @@ export type PageKey =
   | "games"
   | "music"
   | "story"
-  | "settings";
+  | "settings"
+  | "memories"
+  | "bucket";
 
-// ─── App State (top-level shape) ───────────────────────────────────────────
+export type NavigateMode = "push" | "replace";
 
-export interface AppState {
+export type ThemeKey =
+  | "aurora"
+  | "moonlight"
+  | "breeze"
+  | "ocean"
+  | "rose"
+  | "cosmic"
+  | "forest"
+  | "sunset";
+
+export interface DashboardCard {
   page: PageKey;
-  user: User | null;
-  partner: Partner | null;
-  reunionDate: string;
+  icon: string;
+  tag: string;
+  title: string;
+  desc: string;
 }
 
 // ─── Shared Prop Interfaces ────────────────────────────────────────────────
 
 export interface NavigationProps {
-  setPage: (page: PageKey) => void;
+  setPage: (page: PageKey, mode?: NavigateMode) => void;
 }
 
 export interface AuthProps {
   user: User | null;
   partner: Partner | null;
-}
-
-export interface FullAuthProps extends AuthProps {
-  setUser: (user: User | null) => void;
-  setPartner: (partner: Partner | null) => void;
 }

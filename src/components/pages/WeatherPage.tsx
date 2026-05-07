@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { User, Partner, Bond } from "../../lib/types";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import { fetchWeatherByCity, type WeatherData } from "@/lib/weather";
 
 interface WeatherPageProps {
@@ -238,7 +238,7 @@ export function WeatherPage({ user, partner, bond }: WeatherPageProps) {
 
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="inner-wrap">
           <div className="page-title">

@@ -1,21 +1,10 @@
-/**
- * app/page.tsx
- * ─────────────
- * Entry point — intentionally minimal.
- * All logic and state lives in components/AuroraBond.tsx.
- *
- * "use client" is needed here because AuroraBond uses hooks.
- */
 "use client";
 
-import AuroraBond from "../components/AuroraBond";
-import { auth } from "@/lib/firebase";
+import { LandingPage } from "@/components/pages/LandingPage";
+import { useAurora } from "@/components/providers/AuroraProvider";
 
-export default function Home() {
-  console.log(auth);
-  return <AuroraBond />;
+export default function Page() {
+  const { goTo } = useAurora();
 
+  return <LandingPage setPage={goTo} />;
 }
-
-
-

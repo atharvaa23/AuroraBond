@@ -1,22 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { DASHBOARD_CARDS } from "../../lib/constants";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { DASHBOARD_CARDS, FOOTER_QUOTES } from "../../lib/constants";
+import type { Bond, PageKey, Partner, User, NavigateMode } from "../../lib/types";
 import { CountdownClock } from "../ui/CountdownClock";
-import type { PageKey, User, Partner, Bond } from "../../lib/types";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 
 interface DashboardPageProps {
-  setPage: (page: PageKey) => void;
+  setPage: (page: PageKey, mode?: NavigateMode) => void;
   user: User | null;
   partner: Partner | null;
   reunionDate: string;
   bond: Bond | null;
 }
 
-const MOODS = [
+interface Mood {
+  emoji: string;
+  label: string;
+}
+
+const MOODS: Mood[] = [
   { emoji: "🥰", label: "Loved" },
   { emoji: "😊", label: "Happy" },
   { emoji: "😌", label: "Calm" },
@@ -27,24 +33,74 @@ const MOODS = [
   { emoji: "🤍", label: "Soft" },
 ];
 
+const PAGE_PATHS: Record<string, string> = {
+  landing: "/",
+  login: "/login",
+  dashboard: "/dashboard",
+  weather: "/weather",
+  movies: "/movies",
+  chat: "/chat",
+  games: "/games",
+  music: "/music",
+  story: "/story",
+  settings: "/settings",
+  memories: "/memories",
+  bucket: "/bucket",
+};
+
+function getPagePath(page: PageKey | string) {
+  return PAGE_PATHS[page] ?? "/dashboard";
+}
+
+function cleanText(value?: string | null) {
+  return value?.replace(/\s+/g, " ").trim() ?? "";
+}
+
+function getDisplayName(
+  nickname?: string | null,
+  name?: string | null,
+  fallback = "You"
+) {
+  const cleanNickname = cleanText(nickname);
+  const cleanName = cleanText(name);
+
+  return cleanNickname || cleanName || fallback;
+}
+
 const DASH_CSS = `
   .dash-wrap {
-    padding: 100px 40px 60px;
+    padding: 125px 40px 60px;
     max-width: 1200px;
     margin: 0 auto;
     position: relative;
     z-index: 2;
   }
 
-  @media (max-width: 640px) {
-    .dash-wrap {
-      padding: 100px 20px 60px;
-    }
-  }
-
   .dash-hero {
     text-align: center;
     margin-bottom: 60px;
+  }
+
+  .hero-couple-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .hero-person {
+    text-align: center;
+  }
+
+  .hero-avatar {
+    font-size: 40px;
+    margin-bottom: 6px;
+  }
+
+  .hero-name {
+    font-size: 13px;
+    color: var(--muted);
   }
 
   .couple-names {
@@ -64,22 +120,25 @@ const DASH_CSS = `
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(192,132,252,0.3), rgba(251,113,133,0.2));
+    background: linear-gradient(
+      135deg,
+      rgba(192, 132, 252, 0.3),
+      rgba(251, 113, 133, 0.2)
+    );
     animation: orb 4s ease-in-out infinite;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 36px;
     position: relative;
-    cursor: pointer;
   }
 
   .orb::before,
   .orb::after {
-    content: '';
+    content: "";
     position: absolute;
     border-radius: 50%;
-    border: 1px solid rgba(192,132,252,0.3);
+    border: 1px solid rgba(192, 132, 252, 0.3);
     animation: pulseRing 3s ease-out infinite;
     width: 100%;
     height: 100%;
@@ -87,6 +146,24 @@ const DASH_CSS = `
 
   .orb::after {
     animation-delay: 1.5s;
+  }
+
+  .section-header {
+    margin-top: 40px;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-family: var(--font-serif);
+    font-size: 26px;
+    font-weight: 300;
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--aurora1);
   }
 
   .cards-grid {
@@ -97,6 +174,9 @@ const DASH_CSS = `
   }
 
   .dash-card {
+    width: 100%;
+    text-align: left;
+    color: var(--text);
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -106,16 +186,24 @@ const DASH_CSS = `
     backdrop-filter: blur(20px);
     position: relative;
     overflow: hidden;
+    font-family: var(--font-sans);
+    text-decoration: none;
+    display: block;
   }
 
   .dash-card::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, transparent 0%, rgba(192,132,252,0.05) 100%);
+    background: linear-gradient(
+      135deg,
+      transparent 0%,
+      rgba(192, 132, 252, 0.05) 100%
+    );
     opacity: 0;
     transition: opacity 0.4s;
+    pointer-events: none;
   }
 
   .dash-card:hover {
@@ -152,6 +240,7 @@ const DASH_CSS = `
     color: var(--muted);
     font-size: 13px;
     line-height: 1.6;
+    padding-right: 20px;
   }
 
   .dash-card-arrow {
@@ -168,30 +257,16 @@ const DASH_CSS = `
     transform: translate(2px, -2px);
   }
 
-  .section-header {
-    margin-top: 40px;
-    margin-bottom: 14px;
-  }
-
-  .section-title {
-    font-family: var(--font-serif);
-    font-size: 26px;
-    font-weight: 300;
-  }
-
-  .section-label {
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--aurora1);
-  }
-
-  .mood-card {
+  .mood-card,
+  .quote-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 28px;
     backdrop-filter: blur(20px);
+  }
+
+  .mood-card {
     margin-bottom: 32px;
   }
 
@@ -216,6 +291,11 @@ const DASH_CSS = `
     margin-top: 4px;
   }
 
+  .mood-saving {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
   .mood-display-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -223,15 +303,9 @@ const DASH_CSS = `
     margin-bottom: 22px;
   }
 
-  @media (max-width: 640px) {
-    .mood-display-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
   .mood-person {
     border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.04);
     border-radius: 20px;
     padding: 20px;
     text-align: center;
@@ -271,7 +345,7 @@ const DASH_CSS = `
 
   .mood-chip {
     border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text);
     border-radius: var(--radius-full);
     padding: 9px 14px;
@@ -282,34 +356,30 @@ const DASH_CSS = `
 
   .mood-chip:hover {
     border-color: var(--aurora1);
-    background: rgba(192,132,252,0.1);
+    background: rgba(192, 132, 252, 0.1);
     transform: translateY(-1px);
   }
 
   .mood-chip.active {
     border-color: var(--aurora1);
-    background: linear-gradient(135deg, rgba(192,132,252,0.24), rgba(251,113,133,0.14));
+    background: linear-gradient(
+      135deg,
+      rgba(192, 132, 252, 0.24),
+      rgba(251, 113, 133, 0.14)
+    );
     color: white;
+  }
+
+  .mood-chip:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 
   .quotes-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-  }
-
-  @media (max-width: 640px) {
-    .quotes-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .quote-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    backdrop-filter: blur(20px);
   }
 
   .quote-author {
@@ -333,9 +403,14 @@ const DASH_CSS = `
     min-height: 60px;
   }
 
+  .quote-placeholder {
+    color: var(--muted2);
+    font-style: italic;
+  }
+
   .quote-input {
     width: 100%;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     color: var(--text);
@@ -357,6 +432,13 @@ const DASH_CSS = `
     color: var(--muted2);
   }
 
+  .quote-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
   .quote-save-btn {
     background: none;
     border: 1px solid var(--aurora1);
@@ -365,27 +447,112 @@ const DASH_CSS = `
     border-radius: var(--radius-full);
     cursor: pointer;
     font-size: 12px;
-    margin-top: 10px;
     transition: all 0.3s;
     font-family: var(--font-sans);
   }
 
   .quote-save-btn:hover {
-    background: rgba(192,132,252,0.1);
+    background: rgba(192, 132, 252, 0.1);
+  }
+
+  .quote-save-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 
   .dash-footer {
     text-align: center;
     margin-top: 60px;
-    padding-top: 40px;
+    padding-top: 34px;
     border-top: 1px solid var(--border);
   }
-`;
 
-interface Mood {
-  emoji: string;
-  label: string;
-}
+  .dash-footer-quote {
+     max-width: 700px;
+  margin: 0 auto 22px;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.9;
+  letter-spacing: 0.2px;
+  }
+
+  .dash-footer-links {
+    display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  }
+
+  .dash-footer-link {
+
+    border: none;
+    background: transparent;
+    color: var(--muted2);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.25s ease;
+  }
+
+  .dash-footer-link:hover {
+    color: var(--aurora1);
+  }
+
+  .dash-footer-made {
+    color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  }
+
+  .dash-footer-made span {
+    color: var(--aurora3);
+  }
+
+  .dash-footer-brand {
+   margin-top: 6px;
+  color: var(--muted2);
+  font-size: 12px;
+  }
+
+  @media (max-width: 640px) {
+    .dash-wrap {
+      padding: 112px 20px 130px;
+    }
+
+    .dash-hero {
+      margin-bottom: 42px;
+    }
+
+    .hero-couple-row {
+      gap: 18px;
+    }
+
+    .orb {
+      width: 82px;
+      height: 82px;
+      font-size: 30px;
+    }
+
+    .couple-names {
+      font-size: 28px;
+    }
+
+    .mood-display-grid,
+    .quotes-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dash-card,
+    .mood-card,
+    .quote-card {
+      padding: 22px;
+    }
+  }
+`;
 
 interface CurrentMoodCardProps {
   user: User | null;
@@ -405,7 +572,6 @@ function CurrentMoodCard({
   const [saving, setSaving] = useState(false);
 
   const currentUid = user?.uid;
-
   const partnerUid =
     bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
 
@@ -439,11 +605,7 @@ function CurrentMoodCard({
           </div>
         </div>
 
-        {saving && (
-          <div style={{ color: "var(--muted)", fontSize: 12 }}>
-            Saving...
-          </div>
-        )}
+        {saving && <div className="mood-saving">Saving...</div>}
       </div>
 
       <div className="mood-display-grid">
@@ -484,6 +646,7 @@ function CurrentMoodCard({
           return (
             <button
               key={`${mood.emoji}-${mood.label}`}
+              type="button"
               className={`mood-chip ${active ? "active" : ""}`}
               onClick={() => saveMood(mood)}
               disabled={saving}
@@ -504,7 +667,6 @@ interface QuoteCardProps {
   avatar: string;
   nickname: string;
   placeholder: string;
-  editable?: boolean;
 }
 
 function QuoteCard({
@@ -514,19 +676,34 @@ function QuoteCard({
   avatar,
   nickname,
   placeholder,
-  editable = true,
 }: QuoteCardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(quote);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(quote);
+    }
+  }, [quote, editing]);
 
   const save = async () => {
     if (!bondId) return;
 
-    await updateDoc(doc(db, "bonds", bondId), {
-      [field]: draft,
-    });
+    try {
+      setSaving(true);
 
-    setEditing(false);
+      await updateDoc(doc(db, "bonds", bondId), {
+        [field]: draft.trim(),
+      });
+
+      setEditing(false);
+    } catch (error) {
+      console.error("Quote save error:", error);
+      alert("Could not save quote.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -539,24 +716,20 @@ function QuoteCard({
       {!editing ? (
         <>
           <div className="quote-text">
-            {quote || (
-              <span style={{ color: "var(--muted2)", fontStyle: "italic" }}>
-                {placeholder}
-              </span>
+            {quote ? (
+              quote
+            ) : (
+              <span className="quote-placeholder">{placeholder}</span>
             )}
           </div>
 
-          {editable && (
-            <button
-              className="quote-save-btn"
-              onClick={() => {
-                setDraft(quote);
-                setEditing(true);
-              }}
-            >
-              Edit
-            </button>
-          )}
+          <button
+            className="quote-save-btn"
+            type="button"
+            onClick={() => setEditing(true)}
+          >
+            Edit
+          </button>
         </>
       ) : (
         <>
@@ -564,13 +737,32 @@ function QuoteCard({
             className="quote-input"
             rows={3}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(event) => setDraft(event.target.value)}
             placeholder="Write something beautiful…"
           />
 
-          <button className="quote-save-btn" onClick={save}>
-            Save
-          </button>
+          <div className="quote-actions">
+            <button
+              className="quote-save-btn"
+              type="button"
+              onClick={save}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+
+            <button
+              className="quote-save-btn"
+              type="button"
+              onClick={() => {
+                setDraft(quote);
+                setEditing(false);
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -578,17 +770,29 @@ function QuoteCard({
 }
 
 export function DashboardPage({
-  setPage,
   user,
   partner,
   reunionDate,
   bond,
 }: DashboardPageProps) {
-  const myDisplayNickname =
-    bond?.nicknames?.[user?.uid || ""] || user?.nickname || "You";
+  const currentUid = user?.uid;
+  const partnerUid =
+    bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
 
-  const partnerDisplayNickname =
-    bond?.nicknames?.[partner?.uid || ""] || partner?.nickname || "Partner";
+  const myDisplayNickname = getDisplayName(
+    bond?.nicknames?.[currentUid || ""],
+    user?.name,
+    "You"
+  );
+
+  const partnerDisplayNickname = getDisplayName(
+    bond?.nicknames?.[partnerUid || ""],
+    partner?.name,
+    "Partner"
+  );
+
+  const footerQuote =
+    FOOTER_QUOTES[new Date().getDate() % FOOTER_QUOTES.length];
 
   return (
     <>
@@ -596,37 +800,21 @@ export function DashboardPage({
 
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="dash-wrap">
           <div className="dash-hero">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 24,
-                justifyContent: "center",
-                marginBottom: 32,
-              }}
-            >
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 40, marginBottom: 6 }}>
-                  {user?.avatar ?? "💜"}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                  {myDisplayNickname}
-                </div>
+            <div className="hero-couple-row">
+              <div className="hero-person">
+                <div className="hero-avatar">{user?.avatar ?? "💜"}</div>
+                <div className="hero-name">{myDisplayNickname}</div>
               </div>
 
               <div className="orb">💜</div>
 
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 40, marginBottom: 6 }}>
-                  {partner?.avatar ?? "🌸"}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                  {partnerDisplayNickname}
-                </div>
+              <div className="hero-person">
+                <div className="hero-avatar">{partner?.avatar ?? "🌸"}</div>
+                <div className="hero-name">{partnerDisplayNickname}</div>
               </div>
             </div>
 
@@ -640,12 +828,16 @@ export function DashboardPage({
           </div>
 
           {reunionDate ? (
-            <CountdownClock reunionDate={reunionDate} />
+            <CountdownClock
+              reunionDate={reunionDate}
+              myName={myDisplayNickname}
+              partnerName={partnerDisplayNickname}
+            />
           ) : (
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <button className="btn-ghost" onClick={() => setPage("settings")}>
+              <Link className="btn-ghost" href="/settings">
                 Set Reunion Date →
-              </button>
+              </Link>
             </div>
           )}
 
@@ -654,18 +846,18 @@ export function DashboardPage({
           </div>
 
           <div className="cards-grid">
-            {DASHBOARD_CARDS.map((c) => (
-              <div
-                key={c.page}
+            {DASHBOARD_CARDS.map((card) => (
+              <Link
+                key={card.page}
+                href={getPagePath(card.page)}
                 className="dash-card"
-                onClick={() => setPage(c.page as PageKey)}
               >
-                <div className="dash-card-icon">{c.icon}</div>
-                <div className="dash-card-tag">{c.tag}</div>
-                <div className="dash-card-title">{c.title}</div>
-                <div className="dash-card-desc">{c.desc}</div>
+                <div className="dash-card-icon">{card.icon}</div>
+                <div className="dash-card-tag">{card.tag}</div>
+                <div className="dash-card-title">{card.title}</div>
+                <div className="dash-card-desc">{card.desc}</div>
                 <div className="dash-card-arrow">↗</div>
-              </div>
+              </Link>
             ))}
           </div>
 
@@ -706,18 +898,35 @@ export function DashboardPage({
           </div>
 
           <div className="dash-footer">
-            <div
-              style={{
-                fontFamily: "var(--font-serif)",
-                fontSize: 28,
-                fontWeight: 300,
-                marginBottom: 8,
-              }}
-            >
-              Made with love, built for two.
+            <div className="dash-footer-quote">“{footerQuote}”</div>
+
+            <div className="dash-footer-links">
+              <button className="dash-footer-link" type="button">
+                About Us
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Contact Us
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Privacy
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Terms
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Feedback
+              </button>
             </div>
 
-            <div style={{ color: "var(--muted)", fontSize: 13 }}>
+            <div className="dash-footer-made">
+              Made with <span>♥</span> in India
+            </div>
+
+            <div className="dash-footer-brand">
               AuroraBond — your shared emotional universe
             </div>
           </div>

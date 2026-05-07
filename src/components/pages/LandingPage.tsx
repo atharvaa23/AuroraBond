@@ -1,7 +1,7 @@
 "use client";
 
 import type { PageKey } from "../../lib/types";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 
 interface LandingPageProps {
   setPage: (page: PageKey) => void;
@@ -49,7 +49,7 @@ export function LandingPage({ setPage }: LandingPageProps) {
       <style>{LANDING_CSS}</style>
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="landing">
           <div className="landing-eyebrow">✦ A shared emotional universe ✦</div>
