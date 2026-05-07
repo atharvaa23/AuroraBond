@@ -255,16 +255,11 @@ const CHAT_CSS = `
     min-height: 0;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border);
-    border-radius: 30px;
-    background:
-      radial-gradient(circle at 18% 8%, color-mix(in srgb, var(--aurora1) 9%, transparent), transparent 32%),
-      radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--aurora3) 8%, transparent), transparent 34%),
-      color-mix(in srgb, var(--card) 78%, transparent);
-    backdrop-filter: blur(24px);
-    box-shadow:
-      0 22px 70px rgba(0,0,0,0.22),
-      inset 0 1px 0 rgba(255,255,255,0.06);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
     overflow: hidden;
   }
 
@@ -272,11 +267,13 @@ const CHAT_CSS = `
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 22px 22px 12px;
+    padding: 18px 0 12px;
     display: flex;
     flex-direction: column;
     gap: 7px;
     scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .chat-messages::-webkit-scrollbar {
@@ -445,14 +442,12 @@ const CHAT_CSS = `
 
   .chat-input-wrap {
     position: relative;
-    padding: 14px;
-    border-top: 1px solid var(--border);
+    padding: 14px 0 0;
+    border-top: none;
     display: flex;
     gap: 10px;
     align-items: center;
-    background:
-      linear-gradient(180deg, transparent, rgba(0,0,0,0.08)),
-      color-mix(in srgb, var(--bg2) 24%, transparent);
+    background: transparent;
   }
 
   .chat-composer {
@@ -469,6 +464,7 @@ const CHAT_CSS = `
       rgba(255,255,255,0.045);
     padding: 6px 8px;
     transition: all 0.25s ease;
+    backdrop-filter: blur(18px);
   }
 
   .chat-composer:focus-within {
@@ -627,7 +623,7 @@ const CHAT_CSS = `
     transform: translateX(1px);
   }
 
-   @media (max-width: 640px) {
+  @media (max-width: 640px) {
     .chat-page {
       min-height: 100svh;
       height: 100svh;
@@ -639,12 +635,11 @@ const CHAT_CSS = `
       max-width: none;
       height: 100svh;
       min-height: 100svh;
-      padding: 78px 0 92px;
+      padding: 78px 14px 92px;
       overflow: hidden;
     }
 
     .chat-header {
-      padding: 0 14px;
       gap: 10px;
       margin-bottom: 10px;
       flex-shrink: 0;
@@ -681,19 +676,17 @@ const CHAT_CSS = `
       flex: 1;
       width: 100%;
       min-height: 0;
-      border-left: none;
-      border-right: none;
-      border-bottom: none;
-      border-radius: 24px 24px 0 0;
-      box-shadow:
-        0 -8px 35px rgba(0,0,0,0.18),
-        inset 0 1px 0 rgba(255,255,255,0.06);
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .chat-messages {
       flex: 1;
       min-height: 0;
-      padding: 16px 13px 12px;
+      padding: 14px 0 10px;
       gap: 6px;
       overflow-y: auto;
       scroll-behavior: smooth;
@@ -718,12 +711,10 @@ const CHAT_CSS = `
 
     .chat-input-wrap {
       flex-shrink: 0;
-      padding: 10px 10px 12px;
+      padding: 10px 0 12px;
       gap: 8px;
-      background:
-        linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.14)),
-        color-mix(in srgb, var(--bg2) 52%, transparent);
-      backdrop-filter: blur(24px);
+      background: transparent;
+      backdrop-filter: none;
     }
 
     .chat-composer {
@@ -762,7 +753,7 @@ const CHAT_CSS = `
       height: 28px;
       font-size: 17px;
     }
-  }    
+  }
 `;
 
 export function ChatPage({ user, partner, bond }: ChatPageProps) {
