@@ -2,79 +2,79 @@
 
 import { useEffect, useState } from "react";
 import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    onSnapshot,
-    orderBy,
-    query,
-    serverTimestamp,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { PetalCanvas } from "../ui/PetalCanvas";
 import type { User, Partner, Bond } from "../../lib/types";
 
 interface MusicPageProps {
-    user: User | null;
-    partner: Partner | null;
-    bond: Bond | null;
+  user: User | null;
+  partner: Partner | null;
+  bond: Bond | null;
 }
 
 interface MusicItem {
-    id: string;
-    title: string;
-    url: string;
-    type: string;
-    note: string;
-    addedBy: string;
+  id: string;
+  title: string;
+  url: string;
+  type: string;
+  note: string;
+  addedBy: string;
 }
 
 const MUSIC_TYPES = [
-    "Playlist",
-    "Jam",
-    "Song",
-    "Album",
-    "Artist",
-    "Other",
+  "Playlist",
+  "Jam",
+  "Song",
+  "Album",
+  "Artist",
+  "Other",
 ];
 
 function getSpotifyEmbedUrl(link: string) {
-    try {
-        const url = new URL(link);
+  try {
+    const url = new URL(link);
 
-        if (!url.hostname.includes("spotify.com")) return "";
+    if (!url.hostname.includes("spotify.com")) return "";
 
-        const parts = url.pathname.split("/").filter(Boolean);
-        const type = parts[0];
-        const id = parts[1];
+    const parts = url.pathname.split("/").filter(Boolean);
+    const type = parts[0];
+    const id = parts[1];
 
-        const embeddableTypes = [
-            "playlist",
-            "track",
-            "album",
-            "artist",
-            "show",
-            "episode",
-        ];
+    const embeddableTypes = [
+      "playlist",
+      "track",
+      "album",
+      "artist",
+      "show",
+      "episode",
+    ];
 
-        if (!type || !id || !embeddableTypes.includes(type)) {
-            return "";
-        }
-
-        return `https://open.spotify.com/embed/${type}/${id}`;
-    } catch {
-        return "";
+    if (!type || !id || !embeddableTypes.includes(type)) {
+      return "";
     }
+
+    return `https://open.spotify.com/embed/${type}/${id}`;
+  } catch {
+    return "";
+  }
 }
 
 function isValidUrl(value: string) {
-    try {
-        new URL(value);
-        return true;
-    } catch {
-        return false;
-    }
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const MUSIC_CSS = `
@@ -304,246 +304,246 @@ const MUSIC_CSS = `
 `;
 
 export function MusicPage({ user, partner, bond }: MusicPageProps) {
-    const [items, setItems] = useState<MusicItem[]>([]);
-    const [title, setTitle] = useState("");
-    const [url, setUrl] = useState("");
-    const [type, setType] = useState("Playlist");
-    const [note, setNote] = useState("");
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState("");
+  const [items, setItems] = useState<MusicItem[]>([]);
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [type, setType] = useState("Playlist");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-    const bondId = user?.bondId;
-    const currentUid = auth.currentUser?.uid || user?.uid;
+  const bondId = user?.bondId;
+  const currentUid = auth.currentUser?.uid || user?.uid;
 
-    const myNickname =
-        bond?.nicknames?.[currentUid || ""] || user?.nickname || "You";
+  const myNickname =
+    bond?.nicknames?.[currentUid || ""] || user?.nickname || "You";
 
-    const partnerUid =
-        bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
+  const partnerUid =
+    bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
 
-    const partnerNickname =
-        bond?.nicknames?.[partnerUid || ""] || partner?.nickname || "Partner";
+  const partnerNickname =
+    bond?.nicknames?.[partnerUid || ""] || partner?.nickname || "Partner";
 
-    useEffect(() => {
-        if (!bondId) return;
+  useEffect(() => {
+    if (!bondId) return;
 
-        const q = query(
-            collection(db, "bonds", bondId, "musicLinks"),
-            orderBy("createdAt", "desc")
-        );
+    const q = query(
+      collection(db, "bonds", bondId, "musicLinks"),
+      orderBy("createdAt", "desc")
+    );
 
-        const unsub = onSnapshot(q, (snap) => {
-            const list = snap.docs.map((musicDoc) => {
-                const data = musicDoc.data();
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map((musicDoc) => {
+        const data = musicDoc.data();
 
-                return {
-                    id: musicDoc.id,
-                    title: data.title || "Untitled",
-                    url: data.url || "",
-                    type: data.type || "Other",
-                    note: data.note || "",
-                    addedBy: data.addedBy || "",
-                };
-            }) as MusicItem[];
+        return {
+          id: musicDoc.id,
+          title: data.title || "Untitled",
+          url: data.url || "",
+          type: data.type || "Other",
+          note: data.note || "",
+          addedBy: data.addedBy || "",
+        };
+      }) as MusicItem[];
 
-            setItems(list);
-        });
+      setItems(list);
+    });
 
-        return unsub;
-    }, [bondId]);
+    return unsub;
+  }, [bondId]);
 
-    const addMusic = async () => {
-        const cleanedUrl = url.trim();
-        const cleanedTitle = title.trim();
-        const cleanedNote = note.trim();
+  const addMusic = async () => {
+    const cleanedUrl = url.trim();
+    const cleanedTitle = title.trim();
+    const cleanedNote = note.trim();
 
-        if (!bondId || !currentUid) return;
+    if (!bondId || !currentUid) return;
 
-        if (!cleanedUrl) {
-            setError("Paste a music link first.");
-            return;
-        }
-
-        if (!isValidUrl(cleanedUrl)) {
-            setError("Enter a valid link starting with https://");
-            return;
-        }
-
-        try {
-            setSaving(true);
-            setError("");
-
-            await addDoc(collection(db, "bonds", bondId, "musicLinks"), {
-                title: cleanedTitle || type,
-                url: cleanedUrl,
-                type,
-                note: cleanedNote,
-                addedBy: currentUid,
-                createdAt: serverTimestamp(),
-            });
-
-            setTitle("");
-            setUrl("");
-            setType("Playlist");
-            setNote("");
-        } catch (err) {
-            console.error("Add music error:", err);
-            setError("Could not save music link.");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const deleteMusic = async (id: string) => {
-        if (!bondId) return;
-
-        const confirmDelete = window.confirm("Delete this music link?");
-        if (!confirmDelete) return;
-
-        await deleteDoc(doc(db, "bonds", bondId, "musicLinks", id));
-    };
-
-    if (!bondId) {
-        return (
-            <div className="page">
-                <div className="inner-wrap">
-                    <div className="page-title">Music</div>
-
-                    <div style={{ color: "var(--muted)", marginTop: 40, textAlign: "center" }}>
-                        No bond connected yet 🎧
-                    </div>
-                </div>
-            </div>
-        );
+    if (!cleanedUrl) {
+      setError("Paste a link first.");
+      return;
     }
 
+    if (!isValidUrl(cleanedUrl)) {
+      setError("Enter a valid link starting with https://");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      await addDoc(collection(db, "bonds", bondId, "musicLinks"), {
+        title: cleanedTitle || type,
+        url: cleanedUrl,
+        type,
+        note: cleanedNote,
+        addedBy: currentUid,
+        createdAt: serverTimestamp(),
+      });
+
+      setTitle("");
+      setUrl("");
+      setType("Playlist");
+      setNote("");
+    } catch (err) {
+      console.error("Add music error:", err);
+      setError("Could not save music link.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteMusic = async (id: string) => {
+    if (!bondId) return;
+
+    const confirmDelete = window.confirm("Delete this music link?");
+    if (!confirmDelete) return;
+
+    await deleteDoc(doc(db, "bonds", bondId, "musicLinks", id));
+  };
+
+  if (!bondId) {
     return (
-        <>
-            <style>{MUSIC_CSS}</style>
+      <div className="page">
+        <div className="inner-wrap">
+          <div className="page-title">Music</div>
 
-            <div className="page">
-                <div className="aurora-bg" />
-                <PetalCanvas />
-
-                <div className="music-wrap">
-                    <div className="page-title">
-                        Our <span>Music</span>
-                    </div>
-
-                    <div className="page-sub">
-                        Playlists, jams, songs, and tiny soundtracks for {myNickname} &{" "}
-                        {partnerNickname}.
-                    </div>
-
-                    <div className="music-create-card">
-                        <div className="music-form-grid">
-                            <input
-                                className="music-input"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="Title, e.g. Late night playlist"
-                            />
-
-                            <select
-                                className="music-select"
-                                value={type}
-                                onChange={(e) => setType(e.target.value)}
-                            >
-                                {MUSIC_TYPES.map((musicType) => (
-                                    <option key={musicType} value={musicType}>
-                                        {musicType}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <input
-                            className="music-input"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            placeholder="Paste Spotify Jam / Playlist / Song link..."
-                            style={{ marginBottom: 14 }}
-                        />
-
-                        <textarea
-                            className="music-textarea"
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            placeholder="Optional note, e.g. this feels like us..."
-                        />
-
-                        <button
-                            className="music-add-btn"
-                            type="button"
-                            onClick={addMusic}
-                            disabled={saving}
-                        >
-                            {saving ? "Saving..." : "Add"}
-                        </button>
-
-                        {error && <div className="music-error">{error}</div>}
-                    </div>
-
-                    {items.length === 0 ? (
-                        <div className="music-empty">
-                            No music saved yet.
-                            <br />
-                            Add your first playlist, jam, or song link ✨
-                        </div>
-                    ) : (
-                        <div className="music-grid">
-                            {items.map((item) => {
-                                const embedUrl = getSpotifyEmbedUrl(item.url);
-                                const addedByName =
-                                    item.addedBy === currentUid ? myNickname : partnerNickname;
-
-                                return (
-                                    <div className="music-card" key={item.id}>
-                                        <div className="music-card-top">
-                                            <div>
-                                                <div className="music-type">{item.type}</div>
-                                                <div className="music-title">{item.title}</div>
-                                            </div>
-                                        </div>
-
-                                        <div className="music-added">Added by {addedByName}</div>
-
-                                        {item.note && <div className="music-note">{item.note}</div>}
-
-                                        {embedUrl && (
-                                            <iframe
-                                                className="spotify-frame"
-                                                src={embedUrl}
-                                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                                loading="lazy"
-                                            />
-                                        )}
-
-                                        <div className="music-actions">
-                                            <a
-                                                className="music-link-btn"
-                                                href={item.url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                Open Link ↗
-                                            </a>
-
-                                            <button
-                                                className="music-delete-btn"
-                                                type="button"
-                                                onClick={() => deleteMusic(item.id)}
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </>
+          <div style={{ color: "var(--muted)", marginTop: 40, textAlign: "center" }}>
+            No bond connected yet 🎧
+          </div>
+        </div>
+      </div>
     );
+  }
+
+  return (
+    <>
+      <style>{MUSIC_CSS}</style>
+
+      <div className="page">
+        <div className="aurora-bg" />
+        <PetalCanvas />
+
+        <div className="music-wrap">
+          <div className="page-title">
+            Our <span>Music</span>
+          </div>
+
+          <div className="page-sub">
+            Playlists, jams, songs, and tiny soundtracks for {myNickname} &{" "}
+            {partnerNickname}.
+          </div>
+
+          <div className="music-create-card">
+            <div className="music-form-grid">
+              <input
+                className="music-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title, e.g. Late night playlist"
+              />
+
+              <select
+                className="music-select"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+              >
+                {MUSIC_TYPES.map((musicType) => (
+                  <option key={musicType} value={musicType}>
+                    {musicType}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <input
+              className="music-input"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Paste Spotify Jam / Playlist / Song link..."
+              style={{ marginBottom: 14 }}
+            />
+
+            <textarea
+              className="music-textarea"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Optional note, e.g. this feels like us..."
+            />
+
+            <button
+              className="music-add-btn"
+              type="button"
+              onClick={addMusic}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Add"}
+            </button>
+
+            {error && <div className="music-error">{error}</div>}
+          </div>
+
+          {items.length === 0 ? (
+            <div className="music-empty">
+              No music saved yet.
+              <br />
+              Add your first playlist, jam, or song link ✨
+            </div>
+          ) : (
+            <div className="music-grid">
+              {items.map((item) => {
+                const embedUrl = getSpotifyEmbedUrl(item.url);
+                const addedByName =
+                  item.addedBy === currentUid ? myNickname : partnerNickname;
+
+                return (
+                  <div className="music-card" key={item.id}>
+                    <div className="music-card-top">
+                      <div>
+                        <div className="music-type">{item.type}</div>
+                        <div className="music-title">{item.title}</div>
+                      </div>
+                    </div>
+
+                    <div className="music-added">Added by {addedByName}</div>
+
+                    {item.note && <div className="music-note">{item.note}</div>}
+
+                    {embedUrl && (
+                      <iframe
+                        className="spotify-frame"
+                        src={embedUrl}
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                      />
+                    )}
+
+                    <div className="music-actions">
+                      <a
+                        className="music-link-btn"
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open Link ↗
+                      </a>
+
+                      <button
+                        className="music-delete-btn"
+                        type="button"
+                        onClick={() => deleteMusic(item.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }

@@ -7,7 +7,7 @@ interface NavbarProps {
   page: PageKey;
   setPage: (page: PageKey) => void;
   user: User | null;
-  partner: Partner | null;
+  partner?: Partner | null;
   hasUnreadChat?: boolean;
 }
 
@@ -18,12 +18,14 @@ const NAV_CSS = `
     left: 0;
     right: 0;
     z-index: 100;
+
     height: 74px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+
     padding: 0 40px;
-    background: rgba(7,4,15,0.72);
+    background: rgba(7, 4, 15, 0.72);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
   }
@@ -33,45 +35,55 @@ const NAV_CSS = `
     font-size: 22px;
     font-weight: 300;
     letter-spacing: 3px;
-    background: linear-gradient(135deg, var(--aurora1), var(--aurora2), var(--aurora3));
+    white-space: nowrap;
+    cursor: pointer;
+
+    background: linear-gradient(
+      135deg,
+      var(--aurora1),
+      var(--aurora2),
+      var(--aurora3)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    cursor: pointer;
-    white-space: nowrap;
   }
 
   .desktop-nav-links {
     display: flex;
-    gap: 8px;
     align-items: center;
+    gap: 8px;
   }
 
   .nav-btn {
     position: relative;
-    background: none;
+
     border: 1px solid var(--border);
+    background: transparent;
     color: var(--muted);
+
     padding: 6px 16px;
     border-radius: var(--radius-full);
+
     cursor: pointer;
     font-family: var(--font-sans);
     font-size: 12px;
     letter-spacing: 0.5px;
-    transition: all 0.3s ease;
     white-space: nowrap;
+
+    transition: all 0.25s ease;
   }
 
   .nav-btn:hover {
     border-color: var(--aurora1);
     color: var(--aurora1);
-    background: rgba(192,132,252,0.08);
+    background: rgba(192, 132, 252, 0.08);
   }
 
   .nav-btn.active {
     border-color: var(--aurora1);
     color: var(--aurora1);
-    background: rgba(192,132,252,0.1);
+    background: rgba(192, 132, 252, 0.1);
   }
 
   .nav-avatar {
@@ -79,13 +91,15 @@ const NAV_CSS = `
     height: 34px;
     border-radius: 50%;
     border: 1.5px solid var(--aurora1);
-    cursor: pointer;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
+    cursor: pointer;
     font-size: 14px;
-    background: rgba(192,132,252,0.15);
-    transition: all 0.3s;
+    background: rgba(192, 132, 252, 0.15);
+    transition: all 0.25s ease;
     flex-shrink: 0;
   }
 
@@ -98,11 +112,13 @@ const NAV_CSS = `
     position: absolute;
     top: -4px;
     right: -3px;
+
     width: 9px;
     height: 9px;
     border-radius: 50%;
+
     background: #fb7185;
-    box-shadow: 0 0 12px rgba(251,113,133,0.8);
+    box-shadow: 0 0 12px rgba(251, 113, 133, 0.8);
   }
 
   .mobile-nav-tabs {
@@ -116,11 +132,12 @@ const NAV_CSS = `
     }
 
     .nav-logo {
-      font-size: 18px;
-      letter-spacing: 2px;
       max-width: calc(100vw - 90px);
       overflow: hidden;
       text-overflow: ellipsis;
+
+      font-size: 18px;
+      letter-spacing: 2px;
     }
 
     .desktop-nav-links {
@@ -133,49 +150,50 @@ const NAV_CSS = `
       font-size: 13px;
     }
 
-   .mobile-nav-tabs {
+    .mobile-nav-tabs {
       position: fixed;
       left: 50%;
       bottom: 10px;
       z-index: 150;
 
-      width: calc(100% - 20px);
-      max-width: 430px;
+      width: calc(100% - 28px);
+      max-width: 360px;
 
       transform: translateX(-50%);
 
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
-  gap: 7px;
-  padding: 9px;
+      grid-template-columns: repeat(3, 1fr);
+      align-items: center;
+      justify-items: center;
+      gap: 8px;
 
-  align-items: center;
-  justify-items: center;
+      padding: 9px;
 
-  background: rgba(7,4,15,0.88);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  backdrop-filter: blur(24px);
-  box-shadow: 0 14px 45px rgba(0,0,0,0.45);
-}
+      background: rgba(7, 4, 15, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 14px 45px rgba(0, 0, 0, 0.45);
+    }
 
-.mobile-nav-tabs .nav-btn {
-  width: 100%;
-  height: 38px;
+    .mobile-nav-tabs .nav-btn {
+      width: 100%;
+      height: 38px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-  padding: 0 4px;
-  border-radius: 15px;
-  font-size: 9.5px;
-  letter-spacing: 0;
-  text-align: center;
+      padding: 0 6px;
+      border-radius: 15px;
 
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+      font-size: 10px;
+      letter-spacing: 0;
+      text-align: center;
+
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     .mobile-nav-tabs .nav-unread-dot {
       top: 5px;
@@ -190,16 +208,19 @@ const NAV_CSS = `
   }
 
   @media (max-width: 380px) {
-  .mobile-nav-tabs {
-    max-width: 340px;
-    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  }
+    .mobile-nav-tabs {
+      width: calc(100% - 18px);
+      max-width: 330px;
+      gap: 6px;
+      padding: 8px;
+    }
 
-  .mobile-nav-tabs .nav-btn {
-    height: 36px;
-    font-size: 9px;
+    .mobile-nav-tabs .nav-btn {
+      height: 36px;
+      font-size: 9px;
+      padding: 0 4px;
+    }
   }
-}
 `;
 
 export function Navbar({
@@ -208,16 +229,16 @@ export function Navbar({
   user,
   hasUnreadChat = false,
 }: NavbarProps) {
-  const renderNavButton = (label: string, p: string) => {
-    const isChat = p === "chat";
-    const showUnread = isChat && hasUnreadChat && page !== "chat";
+  const renderNavButton = (label: string, targetPage: PageKey) => {
+    const showUnread =
+      targetPage === "chat" && hasUnreadChat && page !== "chat";
 
     return (
       <button
-        key={p}
-        className={`nav-btn ${page === p ? "active" : ""}`}
-        onClick={() => setPage(p as PageKey)}
+        key={targetPage}
         type="button"
+        className={`nav-btn ${page === targetPage ? "active" : ""}`}
+        onClick={() => setPage(targetPage)}
       >
         {label}
         {showUnread && <span className="nav-unread-dot" />}
@@ -235,7 +256,9 @@ export function Navbar({
         </div>
 
         <div className="desktop-nav-links">
-          {NAV_LINKS.map(({ label, page: p }) => renderNavButton(label, p))}
+          {NAV_LINKS.map(({ label, page: targetPage }) =>
+            renderNavButton(label, targetPage as PageKey)
+          )}
         </div>
 
         <div
@@ -248,7 +271,9 @@ export function Navbar({
       </nav>
 
       <div className="mobile-nav-tabs">
-        {NAV_LINKS.map(({ label, page: p }) => renderNavButton(label, p))}
+        {NAV_LINKS.map(({ label, page: targetPage }) =>
+          renderNavButton(label, targetPage as PageKey)
+        )}
       </div>
     </>
   );

@@ -1,30 +1,30 @@
 "use client";
 
 import type { Timestamp } from "firebase/firestore";
-import { Fragment, useState, useRef, useEffect } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
   addDoc,
-  serverTimestamp,
-  getDocs,
-  writeBatch,
+  collection,
   doc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { User, Partner, Bond } from "../../lib/types";
 import { PetalCanvas } from "../ui/PetalCanvas";
 
 interface ChatPageProps {
-  user: (User & { bondId?: string; uid?: string }) | null;
-  partner: (Partner & { uid?: string }) | null;
+  user: User | null;
+  partner: Partner | null;
   bond: Bond | null;
 }
 
-export interface Message {
+interface ChatMessage {
   id: string;
   sender: string;
   text: string;
@@ -39,15 +39,10 @@ interface Presence {
 }
 
 const ONLINE_TIMEOUT = 45 * 1000;
+const TYPING_TIMEOUT = 2500;
 
 function toDate(value: Timestamp | null | undefined): Date | null {
-  if (!value) return null;
-
-  if (typeof value.toDate === "function") {
-    return value.toDate();
-  }
-
-  return null;
+  return value?.toDate?.() ?? null;
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -63,7 +58,7 @@ function getDateKey(date: Date) {
 }
 
 function getMinuteKey(date: Date) {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
+  return `${getDateKey(date)}-${date.getHours()}-${date.getMinutes()}`;
 }
 
 function getDateLabel(date: Date) {
@@ -90,7 +85,7 @@ function getTimeLabel(date: Date) {
   });
 }
 
-function isPartnerRecentlyOnline(presence: Presence | null) {
+function isRecentlyOnline(presence: Presence | null) {
   if (!presence?.isOnline) return false;
 
   const lastSeenDate = toDate(presence.lastSeen);
@@ -100,22 +95,35 @@ function isPartnerRecentlyOnline(presence: Presence | null) {
 }
 
 const CHAT_CSS = `
+  .chat-page {
+    height: 100dvh;
+  }
+
+  .chat-shell {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 20px;
+  }
+
   .chat-outer {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 200px);
+    height: calc(100dvh - 200px);
+    min-height: 0;
   }
 
   .chat-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
     margin-bottom: 16px;
   }
 
   .chat-title-wrap {
     flex: 1;
+    min-width: 0;
   }
 
   .presence-line {
@@ -137,6 +145,7 @@ const CHAT_CSS = `
     height: 8px;
     border-radius: 50%;
     background: var(--muted2);
+    flex-shrink: 0;
   }
 
   .presence-line.online .presence-dot {
@@ -201,6 +210,12 @@ const CHAT_CSS = `
     border-radius: 2px;
   }
 
+  .chat-empty {
+    text-align: center;
+    color: var(--muted);
+    margin-top: 40px;
+  }
+
   .chat-date-divider {
     display: flex;
     justify-content: center;
@@ -225,41 +240,33 @@ const CHAT_CSS = `
     opacity: 0.8;
   }
 
-.msg-row {
-  width: 100%;
-  display: flex;
-  margin-bottom: 6px;
-}
+  .msg-row {
+    width: 100%;
+    display: flex;
+    margin-bottom: 6px;
+  }
 
-.msg-row.mine {
-  justify-content: flex-end;
-}
+  .msg-row.mine {
+    justify-content: flex-end;
+  }
 
-.msg-row.theirs {
-  justify-content: flex-start;
-}
+  .msg-row.theirs {
+    justify-content: flex-start;
+  }
 
-.msg {
-  max-width: 70%;
-  display: flex;
-  flex-direction: column;
-}
+  .msg {
+    max-width: 70%;
+    display: flex;
+    flex-direction: column;
+  }
 
-.msg.mine {
-  align-items: flex-end;
-}
+  .msg.mine {
+    align-items: flex-end;
+  }
 
-.msg.theirs {
-  align-items: flex-start;
-}
-
-.msg.mine .msg-bubble {
-  border-bottom-right-radius: 6px;
-}
-
-.msg.theirs .msg-bubble {
-  border-bottom-left-radius: 6px;
-}
+  .msg.theirs {
+    align-items: flex-start;
+  }
 
   .partner-label {
     font-size: 12px;
@@ -277,6 +284,7 @@ const CHAT_CSS = `
     line-height: 1.6;
     backdrop-filter: blur(20px);
     word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   .msg.mine .msg-bubble {
@@ -286,11 +294,13 @@ const CHAT_CSS = `
       rgba(251,113,133,0.2)
     );
     border: 1px solid rgba(192,132,252,0.3);
+    border-bottom-right-radius: 6px;
   }
 
   .msg.theirs .msg-bubble {
     background: var(--card);
     border: 1px solid var(--border);
+    border-bottom-left-radius: 6px;
   }
 
   .typing-row {
@@ -335,6 +345,7 @@ const CHAT_CSS = `
       transform: translateY(0);
       opacity: 0.45;
     }
+
     40% {
       transform: translateY(-4px);
       opacity: 1;
@@ -360,6 +371,7 @@ const CHAT_CSS = `
     font-size: 14px;
     outline: none;
     transition: all 0.3s;
+    min-width: 0;
   }
 
   .chat-input:focus {
@@ -392,24 +404,73 @@ const CHAT_CSS = `
   }
 
   @media (max-width: 640px) {
+    .chat-page {
+      height: 100dvh;
+    }
+
+    .chat-shell {
+      padding-bottom: 96px;
+    }
+
+    .chat-outer {
+      height: calc(100dvh - 215px);
+    }
+
     .chat-header {
-      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .presence-line {
+      font-size: 11px;
+      padding: 5px 10px;
     }
 
     .clear-chat-btn {
-      padding: 7px 12px;
-      font-size: 10px;
+      padding: 7px 11px;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+    }
+
+    .chat-messages {
+      padding: 14px 0;
+      gap: 6px;
     }
 
     .msg {
-      max-width: 82%;
+      max-width: 84%;
+    }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .partner-label {
+      font-size: 11px;
+    }
+
+    .chat-input-wrap {
+      padding: 12px 0;
+      gap: 8px;
+    }
+
+    .chat-input {
+      padding: 11px 16px;
+      font-size: 13px;
+    }
+
+    .chat-send {
+      width: 40px;
+      height: 40px;
+      font-size: 15px;
     }
   }
 `;
 
 export function ChatPage({ user, partner, bond }: ChatPageProps) {
   const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [clearing, setClearing] = useState(false);
   const [partnerPresence, setPartnerPresence] = useState<Presence | null>(null);
 
@@ -418,45 +479,60 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
 
   const bondId = user?.bondId;
   const currentUid = auth.currentUser?.uid || user?.uid;
-  console.log("CHAT DEBUG:", {
-    authUid: auth.currentUser?.uid,
-    userUid: user?.uid,
-    currentUid,
-    bondId,
-    bondUser1Uid: bond?.user1Uid,
-    bondUser2Uid: bond?.user2Uid,
-    isUser1: currentUid === bond?.user1Uid,
-    isUser2: currentUid === bond?.user2Uid,
-  });
-  const partnerDisplayNickname =
-    bond?.nicknames?.[partner?.uid || ""] || partner?.nickname || "Partner";
 
-  const partnerOnline = isPartnerRecentlyOnline(partnerPresence);
+  const partnerUid =
+    bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
+
+  const partnerDisplayNickname =
+    bond?.nicknames?.[partnerUid || ""] || partner?.nickname || "Partner";
+
+  const partnerOnline = isRecentlyOnline(partnerPresence);
   const partnerTyping = Boolean(partnerPresence?.typing) && partnerOnline;
+
+  const writePresence = async (updates: Partial<Presence>) => {
+    if (!bondId || !currentUid) return;
+
+    await setDoc(
+      doc(db, "bonds", bondId, "presence", currentUid),
+      {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  };
+
+  const updateTypingStatus = (typing: boolean) => {
+    writePresence({
+      isOnline: true,
+      typing,
+      lastSeen: serverTimestamp() as unknown as Timestamp,
+    }).catch(() => { });
+  };
 
   useEffect(() => {
     if (!bondId) return;
 
-    const q = query(
+    const messagesQuery = query(
       collection(db, "bonds", bondId, "messages"),
       orderBy("createdAt", "asc")
     );
 
     const unsub = onSnapshot(
-      q,
+      messagesQuery,
       (snap) => {
-        const msgs = snap.docs.map((doc) => {
-          const data = doc.data();
+        const nextMessages = snap.docs.map((messageDoc) => {
+          const data = messageDoc.data();
 
           return {
-            id: doc.id,
+            id: messageDoc.id,
             sender: data.sender || "",
             text: data.text || "",
             createdAt: data.createdAt || null,
           };
-        }) as Message[];
+        }) as ChatMessage[];
 
-        setMessages(msgs);
+        setMessages(nextMessages);
       },
       (error) => {
         console.error("Chat messages listener error:", error);
@@ -467,114 +543,38 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
   }, [bondId]);
 
   useEffect(() => {
-    if (!bondId || !currentUid) return;
+    if (!bondId || !partnerUid) return;
 
-    const presenceRef = doc(db, "bonds", bondId, "presence", currentUid);
+    const partnerPresenceRef = doc(db, "bonds", bondId, "presence", partnerUid);
 
-    const setOnline = async () => {
-      await setDoc(
-        presenceRef,
-        {
-          isOnline: true,
-          typing: false,
-          lastSeen: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-    };
-
-    const setOffline = () => {
-      setDoc(
-        presenceRef,
-        {
-          isOnline: false,
-          typing: false,
-          lastSeen: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      ).catch(() => { });
-    };
-
-    setOnline();
-
-    const heartbeat = window.setInterval(() => {
-      setDoc(
-        presenceRef,
-        {
-          isOnline: true,
-          lastSeen: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      ).catch(() => { });
-    }, 20000);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        setOnline();
-      } else {
-        setDoc(
-          presenceRef,
-          {
-            typing: false,
-            lastSeen: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ).catch(() => { });
+    const unsub = onSnapshot(
+      partnerPresenceRef,
+      (snap) => {
+        setPartnerPresence(snap.exists() ? (snap.data() as Presence) : null);
+      },
+      (error) => {
+        console.error("Partner presence listener error:", error);
       }
-    };
-
-    window.addEventListener("beforeunload", setOffline);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.clearInterval(heartbeat);
-      window.removeEventListener("beforeunload", setOffline);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      setOffline();
-    };
-  }, [bondId, currentUid]);
-
-  useEffect(() => {
-    if (!bondId || !partner?.uid) return;
-
-    const partnerPresenceRef = doc(db, "bonds", bondId, "presence", partner.uid);
-
-    const unsub = onSnapshot(partnerPresenceRef, (snap) => {
-      if (!snap.exists()) {
-        setPartnerPresence(null);
-        return;
-      }
-
-      setPartnerPresence(snap.data() as Presence);
-    });
+    );
 
     return unsub;
-  }, [bondId, partner?.uid]);
+  }, [bondId, partnerUid]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, partnerTyping]);
 
-  const updateTypingStatus = (typing: boolean) => {
-    if (!bondId || !currentUid) return;
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
 
-    const presenceRef = doc(db, "bonds", bondId, "presence", currentUid);
-
-    setDoc(
-      presenceRef,
-      {
-        isOnline: true,
-        typing,
-        lastSeen: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    ).catch(() => { });
-  };
+      updateTypingStatus(false);
+    };
+    // Only run on unmount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDraftChange = (value: string) => {
     setDraft(value);
@@ -590,7 +590,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
     if (hasText) {
       typingTimeoutRef.current = setTimeout(() => {
         updateTypingStatus(false);
-      }, 2500);
+      }, TYPING_TIMEOUT);
     }
   };
 
@@ -610,6 +610,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
     }
   };
 
@@ -622,8 +623,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
     try {
       setClearing(true);
 
-      const messagesRef = collection(db, "bonds", bondId, "messages");
-      const snap = await getDocs(messagesRef);
+      const snap = await getDocs(collection(db, "bonds", bondId, "messages"));
 
       if (snap.empty) return;
 
@@ -647,16 +647,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
       <div className="page">
         <div className="inner-wrap">
           <div className="page-title">Chat</div>
-
-          <div
-            style={{
-              color: "var(--muted)",
-              marginTop: 40,
-              textAlign: "center",
-            }}
-          >
-            No bond connected yet ✨
-          </div>
+          <div className="chat-empty">No bond connected yet ✨</div>
         </div>
       </div>
     );
@@ -666,19 +657,11 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
     <>
       <style>{CHAT_CSS}</style>
 
-      <div className="page" style={{ height: "100vh" }}>
+      <div className="page chat-page">
         <div className="aurora-bg" />
         <PetalCanvas />
 
-        <div
-          className="inner-wrap"
-          style={{
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            paddingBottom: 20,
-          }}
-        >
+        <div className="inner-wrap chat-shell">
           <div className="chat-header">
             <div className="chat-title-wrap">
               <div className="page-title">
@@ -694,6 +677,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
                   }`}
               >
                 <span className="presence-dot" />
+
                 {partnerTyping
                   ? `${partnerDisplayNickname} is typing...`
                   : partnerOnline
@@ -704,6 +688,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
 
             <button
               className="clear-chat-btn"
+              type="button"
               onClick={clearChat}
               disabled={clearing || messages.length === 0}
             >
@@ -714,21 +699,15 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
           <div className="chat-outer">
             <div className="chat-messages">
               {messages.length === 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    color: "var(--muted)",
-                    marginTop: 40,
-                  }}
-                >
+                <div className="chat-empty">
                   Start your first conversation ✨
                 </div>
               )}
 
-              {messages.map((m, index) => {
-                const isMine = m.sender === currentUid;
+              {messages.map((message, index) => {
+                const isMine = message.sender === currentUid;
 
-                const currentDate = toDate(m.createdAt);
+                const currentDate = toDate(message.createdAt);
                 const previousDate = toDate(messages[index - 1]?.createdAt);
 
                 const showDateDivider =
@@ -742,7 +721,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
                     getMinuteKey(currentDate) !== getMinuteKey(previousDate));
 
                 return (
-                  <Fragment key={m.id}>
+                  <Fragment key={message.id}>
                     {showDateDivider && (
                       <div className="chat-date-divider">
                         <span>{getDateLabel(currentDate)}</span>
@@ -764,7 +743,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
                           </div>
                         )}
 
-                        <div className="msg-bubble">{m.text}</div>
+                        <div className="msg-bubble">{message.text}</div>
                       </div>
                     </div>
                   </Fragment>
@@ -774,6 +753,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
               {partnerTyping && (
                 <div className="typing-row">
                   <span>{partner?.avatar ?? "🌸"}</span>
+
                   <div className="typing-bubble">
                     <span />
                     <span />
@@ -790,13 +770,13 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
                 className="chat-input"
                 placeholder="Write something beautiful…"
                 value={draft}
-                onChange={(e) => handleDraftChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") send();
+                onChange={(event) => handleDraftChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") send();
                 }}
               />
 
-              <button className="chat-send" onClick={send}>
+              <button className="chat-send" type="button" onClick={send}>
                 ↑
               </button>
             </div>
