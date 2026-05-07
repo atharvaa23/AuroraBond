@@ -1,14 +1,35 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { PageKey, User, Partner } from "../../lib/types";
 import { NAV_LINKS } from "../../lib/constants";
 
 interface NavbarProps {
-  page: PageKey;
-  setPage: (page: PageKey) => void;
+  page?: PageKey;
+  setPage?: (page: PageKey) => void;
   user: User | null;
   partner?: Partner | null;
   hasUnreadChat?: boolean;
+}
+
+const PAGE_PATHS: Record<string, string> = {
+  landing: "/",
+  login: "/login",
+  dashboard: "/dashboard",
+  weather: "/weather",
+  movies: "/movies",
+  chat: "/chat",
+  games: "/games",
+  music: "/music",
+  story: "/story",
+  settings: "/settings",
+  memories: "/memories",
+  bucket: "/bucket",
+};
+
+function getPagePath(page: PageKey | string) {
+  return PAGE_PATHS[page] ?? "/dashboard";
 }
 
 const NAV_CSS = `
@@ -37,6 +58,7 @@ const NAV_CSS = `
     letter-spacing: 3px;
     white-space: nowrap;
     cursor: pointer;
+    text-decoration: none;
 
     background: linear-gradient(
       135deg,
@@ -50,10 +72,15 @@ const NAV_CSS = `
   }
 
   .desktop-nav-links {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
+    justify-content: center;
+    gap: 10px;
+}
 
   .nav-btn {
     position: relative;
@@ -72,6 +99,11 @@ const NAV_CSS = `
     white-space: nowrap;
 
     transition: all 0.25s ease;
+    text-decoration: none;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .nav-btn:hover {
@@ -101,6 +133,7 @@ const NAV_CSS = `
     background: rgba(192, 132, 252, 0.15);
     transition: all 0.25s ease;
     flex-shrink: 0;
+    text-decoration: none;
   }
 
   .nav-avatar:hover {
@@ -223,26 +256,24 @@ const NAV_CSS = `
   }
 `;
 
-export function Navbar({
-  page,
-  setPage,
-  user,
-  hasUnreadChat = false,
-}: NavbarProps) {
-  const renderNavButton = (label: string, targetPage: PageKey) => {
+export function Navbar({ user, hasUnreadChat = false }: NavbarProps) {
+  const pathname = usePathname();
+
+  const renderNavButton = (label: string, targetPage: PageKey | string) => {
+    const href = getPagePath(targetPage);
+    const isActive = pathname === href;
     const showUnread =
-      targetPage === "chat" && hasUnreadChat && page !== "chat";
+      targetPage === "chat" && hasUnreadChat && pathname !== "/chat";
 
     return (
-      <button
+      <Link
         key={targetPage}
-        type="button"
-        className={`nav-btn ${page === targetPage ? "active" : ""}`}
-        onClick={() => setPage(targetPage)}
+        href={href}
+        className={`nav-btn ${isActive ? "active" : ""}`}
       >
         {label}
         {showUnread && <span className="nav-unread-dot" />}
-      </button>
+      </Link>
     );
   };
 
@@ -251,28 +282,24 @@ export function Navbar({
       <style>{NAV_CSS}</style>
 
       <nav className="nav-top">
-        <div className="nav-logo" onClick={() => setPage("dashboard")}>
+        <Link href="/dashboard" className="nav-logo">
           AuroraBond
-        </div>
+        </Link>
 
         <div className="desktop-nav-links">
           {NAV_LINKS.map(({ label, page: targetPage }) =>
-            renderNavButton(label, targetPage as PageKey)
+            renderNavButton(label, targetPage)
           )}
         </div>
 
-        <div
-          className="nav-avatar"
-          onClick={() => setPage("settings")}
-          title="Settings"
-        >
+        <Link href="/settings" className="nav-avatar" title="Settings">
           {user?.avatar ?? "💜"}
-        </div>
+        </Link>
       </nav>
 
       <div className="mobile-nav-tabs">
         {NAV_LINKS.map(({ label, page: targetPage }) =>
-          renderNavButton(label, targetPage as PageKey)
+          renderNavButton(label, targetPage)
         )}
       </div>
     </>

@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DASHBOARD_CARDS } from "../../lib/constants";
+import { DASHBOARD_CARDS, FOOTER_QUOTES } from "../../lib/constants";
 import type { Bond, PageKey, Partner, User, NavigateMode } from "../../lib/types";
 import { CountdownClock } from "../ui/CountdownClock";
 import { PetalCanvas } from "../ui/PetalCanvas";
@@ -32,9 +33,43 @@ const MOODS: Mood[] = [
   { emoji: "🤍", label: "Soft" },
 ];
 
+const PAGE_PATHS: Record<string, string> = {
+  landing: "/",
+  login: "/login",
+  dashboard: "/dashboard",
+  weather: "/weather",
+  movies: "/movies",
+  chat: "/chat",
+  games: "/games",
+  music: "/music",
+  story: "/story",
+  settings: "/settings",
+  memories: "/memories",
+  bucket: "/bucket",
+};
+
+function getPagePath(page: PageKey | string) {
+  return PAGE_PATHS[page] ?? "/dashboard";
+}
+
+function cleanText(value?: string | null) {
+  return value?.replace(/\s+/g, " ").trim() ?? "";
+}
+
+function getDisplayName(
+  nickname?: string | null,
+  name?: string | null,
+  fallback = "You"
+) {
+  const cleanNickname = cleanText(nickname);
+  const cleanName = cleanText(name);
+
+  return cleanNickname || cleanName || fallback;
+}
+
 const DASH_CSS = `
   .dash-wrap {
-    padding: 100px 40px 60px;
+    padding: 125px 40px 60px;
     max-width: 1200px;
     margin: 0 auto;
     position: relative;
@@ -152,6 +187,8 @@ const DASH_CSS = `
     position: relative;
     overflow: hidden;
     font-family: var(--font-sans);
+    text-decoration: none;
+    display: block;
   }
 
   .dash-card::before {
@@ -426,25 +463,64 @@ const DASH_CSS = `
   .dash-footer {
     text-align: center;
     margin-top: 60px;
-    padding-top: 40px;
+    padding-top: 34px;
     border-top: 1px solid var(--border);
   }
 
-  .dash-footer-title {
-    font-family: var(--font-serif);
-    font-size: 28px;
-    font-weight: 300;
-    margin-bottom: 8px;
+  .dash-footer-quote {
+     max-width: 700px;
+  margin: 0 auto 22px;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.9;
+  letter-spacing: 0.2px;
   }
 
-  .dash-footer-sub {
+  .dash-footer-links {
+    display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  }
+
+  .dash-footer-link {
+
+    border: none;
+    background: transparent;
+    color: var(--muted2);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.25s ease;
+  }
+
+  .dash-footer-link:hover {
+    color: var(--aurora1);
+  }
+
+  .dash-footer-made {
     color: var(--muted);
-    font-size: 13px;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  }
+
+  .dash-footer-made span {
+    color: var(--aurora3);
+  }
+
+  .dash-footer-brand {
+   margin-top: 6px;
+  color: var(--muted2);
+  font-size: 12px;
   }
 
   @media (max-width: 640px) {
     .dash-wrap {
-      padding: 100px 20px 130px;
+      padding: 112px 20px 130px;
     }
 
     .dash-hero {
@@ -694,7 +770,6 @@ function QuoteCard({
 }
 
 export function DashboardPage({
-  setPage,
   user,
   partner,
   reunionDate,
@@ -704,11 +779,20 @@ export function DashboardPage({
   const partnerUid =
     bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
 
-  const myDisplayNickname =
-    bond?.nicknames?.[currentUid || ""] || user?.nickname || "You";
+  const myDisplayNickname = getDisplayName(
+    bond?.nicknames?.[currentUid || ""],
+    user?.name,
+    "You"
+  );
 
-  const partnerDisplayNickname =
-    bond?.nicknames?.[partnerUid || ""] || partner?.nickname || "Partner";
+  const partnerDisplayNickname = getDisplayName(
+    bond?.nicknames?.[partnerUid || ""],
+    partner?.name,
+    "Partner"
+  );
+
+  const footerQuote =
+    FOOTER_QUOTES[new Date().getDate() % FOOTER_QUOTES.length];
 
   return (
     <>
@@ -744,16 +828,16 @@ export function DashboardPage({
           </div>
 
           {reunionDate ? (
-            <CountdownClock reunionDate={reunionDate} />
+            <CountdownClock
+              reunionDate={reunionDate}
+              myName={myDisplayNickname}
+              partnerName={partnerDisplayNickname}
+            />
           ) : (
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <button
-                className="btn-ghost"
-                type="button"
-                onClick={() => setPage("settings")}
-              >
+              <Link className="btn-ghost" href="/settings">
                 Set Reunion Date →
-              </button>
+              </Link>
             </div>
           )}
 
@@ -763,18 +847,17 @@ export function DashboardPage({
 
           <div className="cards-grid">
             {DASHBOARD_CARDS.map((card) => (
-              <button
+              <Link
                 key={card.page}
-                type="button"
+                href={getPagePath(card.page)}
                 className="dash-card"
-                onClick={() => setPage(card.page)}
               >
                 <div className="dash-card-icon">{card.icon}</div>
                 <div className="dash-card-tag">{card.tag}</div>
                 <div className="dash-card-title">{card.title}</div>
                 <div className="dash-card-desc">{card.desc}</div>
                 <div className="dash-card-arrow">↗</div>
-              </button>
+              </Link>
             ))}
           </div>
 
@@ -815,11 +898,35 @@ export function DashboardPage({
           </div>
 
           <div className="dash-footer">
-            <div className="dash-footer-title">
-              Made with love, built for two.
+            <div className="dash-footer-quote">“{footerQuote}”</div>
+
+            <div className="dash-footer-links">
+              <button className="dash-footer-link" type="button">
+                About Us
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Contact Us
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Privacy
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Terms
+              </button>
+
+              <button className="dash-footer-link" type="button">
+                Feedback
+              </button>
             </div>
 
-            <div className="dash-footer-sub">
+            <div className="dash-footer-made">
+              Made with <span>♥</span> in India
+            </div>
+
+            <div className="dash-footer-brand">
               AuroraBond — your shared emotional universe
             </div>
           </div>

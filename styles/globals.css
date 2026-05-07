@@ -10,28 +10,135 @@
   padding: 0;
 }
 
-/* ─── Design Tokens ─────────────────────────────────────────────────────── */
-:root {
-  --bg: #07040f;
-  --bg2: #0e0919;
-  --card: rgba(255, 255, 255, 0.04);
-  --card-hover: rgba(255, 255, 255, 0.07);
-  --border: rgba(255, 255, 255, 0.07);
-  --border-glow: rgba(192, 132, 252, 0.25);
-  --aurora1: #c084fc;
-  --aurora2: #f0abfc;
+/* ─── Design Tokens / Themes ────────────────────────────────────────────── */
+:root,
+:root[data-theme="aurora"] {
+  --bg: #050816;
+  --bg2: #0b1026;
+
+  --card: rgba(255, 255, 255, 0.055);
+  --card-hover: rgba(255, 255, 255, 0.085);
+
+  --border: rgba(255, 255, 255, 0.09);
+  --border-glow: rgba(125, 211, 252, 0.28);
+
+  --aurora1: #7dd3fc;
+  --aurora2: #c084fc;
   --aurora3: #fb7185;
-  --aurora4: #818cf8;
-  --text: rgba(255, 255, 255, 0.92);
-  --muted: rgba(255, 255, 255, 0.45);
-  --muted2: rgba(255, 255, 255, 0.25);
+  --aurora4: #60a5fa;
+
+  --text: rgba(255, 255, 255, 0.94);
+  --muted: rgba(255, 255, 255, 0.52);
+  --muted2: rgba(255, 255, 255, 0.3);
+
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'DM Sans', system-ui, sans-serif;
+
   --radius-sm: 12px;
   --radius-md: 16px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
+  --radius-lg: 22px;
+  --radius-xl: 26px;
   --radius-full: 100px;
+}
+
+:root[data-theme="ocean"] {
+  --bg: #03111f;
+  --bg2: #062033;
+
+  --card: rgba(186, 230, 253, 0.055);
+  --card-hover: rgba(186, 230, 253, 0.09);
+
+  --border: rgba(186, 230, 253, 0.11);
+  --border-glow: rgba(56, 189, 248, 0.32);
+
+  --aurora1: #38bdf8;
+  --aurora2: #22d3ee;
+  --aurora3: #818cf8;
+  --aurora4: #0ea5e9;
+
+  --text: rgba(240, 249, 255, 0.95);
+  --muted: rgba(240, 249, 255, 0.53);
+  --muted2: rgba(240, 249, 255, 0.3);
+}
+
+:root[data-theme="rose"] {
+  --bg: #170712;
+  --bg2: #25101d;
+
+  --card: rgba(255, 255, 255, 0.055);
+  --card-hover: rgba(255, 255, 255, 0.085);
+
+  --border: rgba(251, 113, 133, 0.13);
+  --border-glow: rgba(251, 113, 133, 0.32);
+
+  --aurora1: #f9a8d4;
+  --aurora2: #fb7185;
+  --aurora3: #c084fc;
+  --aurora4: #f472b6;
+
+  --text: rgba(255, 245, 248, 0.95);
+  --muted: rgba(255, 245, 248, 0.52);
+  --muted2: rgba(255, 245, 248, 0.3);
+}
+
+:root[data-theme="cosmic"] {
+  --bg: #08051a;
+  --bg2: #120a2e;
+
+  --card: rgba(255, 255, 255, 0.052);
+  --card-hover: rgba(255, 255, 255, 0.085);
+
+  --border: rgba(192, 132, 252, 0.13);
+  --border-glow: rgba(192, 132, 252, 0.35);
+
+  --aurora1: #a78bfa;
+  --aurora2: #c084fc;
+  --aurora3: #f0abfc;
+  --aurora4: #818cf8;
+
+  --text: rgba(250, 245, 255, 0.95);
+  --muted: rgba(250, 245, 255, 0.52);
+  --muted2: rgba(250, 245, 255, 0.3);
+}
+
+:root[data-theme="forest"] {
+  --bg: #04120d;
+  --bg2: #092019;
+
+  --card: rgba(236, 253, 245, 0.052);
+  --card-hover: rgba(236, 253, 245, 0.085);
+
+  --border: rgba(110, 231, 183, 0.13);
+  --border-glow: rgba(52, 211, 153, 0.32);
+
+  --aurora1: #6ee7b7;
+  --aurora2: #34d399;
+  --aurora3: #a7f3d0;
+  --aurora4: #10b981;
+
+  --text: rgba(236, 253, 245, 0.95);
+  --muted: rgba(236, 253, 245, 0.5);
+  --muted2: rgba(236, 253, 245, 0.28);
+}
+
+:root[data-theme="sunset"] {
+  --bg: #170b08;
+  --bg2: #28120d;
+
+  --card: rgba(255, 247, 237, 0.055);
+  --card-hover: rgba(255, 247, 237, 0.085);
+
+  --border: rgba(251, 146, 60, 0.13);
+  --border-glow: rgba(251, 146, 60, 0.32);
+
+  --aurora1: #fb923c;
+  --aurora2: #fb7185;
+  --aurora3: #f472b6;
+  --aurora4: #f59e0b;
+
+  --text: rgba(255, 247, 237, 0.95);
+  --muted: rgba(255, 247, 237, 0.52);
+  --muted2: rgba(255, 247, 237, 0.3);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
@@ -105,11 +212,15 @@ body {
 
   0%,
   100% {
-    box-shadow: 0 0 40px 10px rgba(192, 132, 252, 0.3), 0 0 80px 20px rgba(240, 171, 252, 0.1);
+    box-shadow:
+      0 0 42px 10px color-mix(in srgb, var(--aurora1) 22%, transparent),
+      0 0 82px 20px color-mix(in srgb, var(--aurora2) 12%, transparent);
   }
 
   50% {
-    box-shadow: 0 0 60px 20px rgba(251, 113, 133, 0.35), 0 0 120px 40px rgba(192, 132, 252, 0.15);
+    box-shadow:
+      0 0 60px 18px color-mix(in srgb, var(--aurora3) 26%, transparent),
+      0 0 118px 38px color-mix(in srgb, var(--aurora1) 13%, transparent);
   }
 }
 
@@ -153,7 +264,6 @@ body {
   }
 }
 
-
 /* ─── Layout Utilities ───────────────────────────────────────────────────── */
 .page {
   min-height: 100vh;
@@ -169,12 +279,20 @@ body {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(192, 132, 252, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(251, 113, 133, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 60% 30%, rgba(129, 140, 248, 0.08) 0%, transparent 40%);
+    radial-gradient(ellipse at 18% 18%,
+      color-mix(in srgb, var(--aurora1) 18%, transparent) 0%,
+      transparent 46%),
+    radial-gradient(ellipse at 82% 78%,
+      color-mix(in srgb, var(--aurora3) 15%, transparent) 0%,
+      transparent 48%),
+    radial-gradient(ellipse at 58% 28%,
+      color-mix(in srgb, var(--aurora2) 14%, transparent) 0%,
+      transparent 42%),
+    linear-gradient(135deg, var(--bg) 0%, var(--bg2) 48%, var(--bg) 100%);
+  background-size: 180% 180%;
   pointer-events: none;
   z-index: 0;
-  animation: auroraShift 12s ease infinite;
+  animation: auroraShift 14s ease infinite;
 }
 
 .petal-canvas {
@@ -192,7 +310,10 @@ body {
 
 /* Gradient text helper */
 .gradient-text {
-  background: linear-gradient(135deg, var(--aurora1), var(--aurora2), var(--aurora3));
+  background: linear-gradient(135deg,
+      var(--aurora1),
+      var(--aurora2),
+      var(--aurora3));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -228,7 +349,7 @@ body {
 
 .input-field:focus {
   border-color: var(--aurora1);
-  background: rgba(192, 132, 252, 0.05);
+  background: color-mix(in srgb, var(--aurora1) 7%, transparent);
 }
 
 .input-field::placeholder {
@@ -250,7 +371,10 @@ body {
 
 /* Buttons */
 .btn-primary {
-  background: linear-gradient(135deg, var(--aurora1), var(--aurora3));
+  background: linear-gradient(135deg,
+      var(--aurora1),
+      var(--aurora2),
+      var(--aurora3));
   color: white;
   border: none;
   padding: 14px 36px;
@@ -260,12 +384,14 @@ body {
   font-size: 14px;
   letter-spacing: 0.5px;
   transition: all 0.4s ease;
-  box-shadow: 0 0 30px rgba(192, 132, 252, 0.3);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--aurora1) 24%, transparent);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 50px rgba(192, 132, 252, 0.5);
+  box-shadow:
+    0 0 40px color-mix(in srgb, var(--aurora1) 32%, transparent),
+    0 0 55px color-mix(in srgb, var(--aurora3) 18%, transparent);
 }
 
 .btn-ghost {
@@ -278,6 +404,8 @@ body {
   font-family: var(--font-sans);
   font-size: 14px;
   transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .btn-ghost:hover {
@@ -303,7 +431,10 @@ body {
 }
 
 .add-btn {
-  background: linear-gradient(135deg, var(--aurora1), var(--aurora3));
+  background: linear-gradient(135deg,
+      var(--aurora1),
+      var(--aurora2),
+      var(--aurora3));
   color: white;
   border: none;
   padding: 12px 28px;
@@ -318,11 +449,16 @@ body {
 
 .add-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(192, 132, 252, 0.3);
+  box-shadow:
+    0 8px 24px color-mix(in srgb, var(--aurora1) 24%, transparent),
+    0 8px 30px color-mix(in srgb, var(--aurora3) 16%, transparent);
 }
 
 .save-btn {
-  background: linear-gradient(135deg, var(--aurora1), var(--aurora3));
+  background: linear-gradient(135deg,
+      var(--aurora1),
+      var(--aurora2),
+      var(--aurora3));
   color: white;
   border: none;
   padding: 12px 28px;
@@ -336,8 +472,11 @@ body {
 }
 
 .save-btn:hover {
-  opacity: 0.9;
+  opacity: 0.95;
   transform: translateY(-1px);
+  box-shadow:
+    0 8px 24px color-mix(in srgb, var(--aurora1) 22%, transparent),
+    0 8px 30px color-mix(in srgb, var(--aurora3) 14%, transparent);
 }
 
 /* Section helpers */
@@ -413,7 +552,7 @@ body {
 }
 
 .modal {
-  background: #110d1f;
+  background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 36px;
@@ -485,7 +624,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(192, 132, 252, 0.2);
+  background: linear-gradient(180deg,
+      color-mix(in srgb, var(--aurora1) 36%, transparent),
+      color-mix(in srgb, var(--aurora2) 32%, transparent),
+      color-mix(in srgb, var(--aurora3) 30%, transparent));
   border-radius: 3px;
 }
 

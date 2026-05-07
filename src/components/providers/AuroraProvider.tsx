@@ -50,6 +50,8 @@ const PAGE_TO_PATH: Record<PageKey, string> = {
     music: "/music",
     story: "/story",
     settings: "/settings",
+    memories: "/memories",
+    bucket: "/bucket",
 };
 
 const PUBLIC_AUTH_PAGES = ["/", "/login"];
@@ -91,20 +93,6 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
             setHasUnreadChat(false);
         }
     }, [pathname]);
-
-    useEffect(() => {
-        const handlePageShow = (event: PageTransitionEvent) => {
-            if (event.persisted) {
-                window.location.reload();
-            }
-        };
-
-        window.addEventListener("pageshow", handlePageShow);
-
-        return () => {
-            window.removeEventListener("pageshow", handlePageShow);
-        };
-    }, []);
 
     useEffect(() => {
         if (!user) return;

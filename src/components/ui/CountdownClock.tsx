@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 interface CountdownClockProps {
   reunionDate: string;
+  myName?: string;
+  partnerName?: string;
 }
 
 interface TimeLeft {
@@ -417,7 +419,11 @@ const COUNTDOWN_CSS = `
   }
 `;
 
-export function CountdownClock({ reunionDate }: CountdownClockProps) {
+export function CountdownClock({
+  reunionDate,
+  myName = "You",
+  partnerName = "your partner",
+}: CountdownClockProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() =>
     getTimeLeft(reunionDate)
   );
@@ -475,15 +481,17 @@ export function CountdownClock({ reunionDate }: CountdownClockProps) {
             <div className="together-title">Together Forever</div>
 
             <div className="together-sub">
-              The waiting has softened into presence, the calls have become
-              real laughter, and every little dream now has a place to begin.
+              The waiting has softened into presence for{" "}
+              <strong>{myName}</strong> and <strong>{partnerName}</strong>, the
+              calls have become real laughter, and every little dream now has a
+              place to begin.
               <br />
               You are no longer counting the days between you — you are
               <strong> collecting moments beside each other.</strong>
             </div>
 
             <div className="together-mini">
-              Two hearts, one orbit, one beautiful forever.
+              Two hearts, Loving each other forever.
             </div>
           </div>
         </div>

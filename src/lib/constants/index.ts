@@ -1,4 +1,4 @@
-import type { Movie, StoryEvent, PageKey } from "../types";
+import type { Movie, StoryEvent, PageKey, DashboardCard, ThemeKey } from "../types";
 
 // ─── Avatar Options ────────────────────────────────────────────────────────
 
@@ -18,6 +18,43 @@ export const AVATARS = [
   "🌊",
   "🦄",
 ] as const;
+
+export const THEME_OPTIONS = [
+  {
+    key: "aurora",
+    label: "Aurora",
+    desc: "Soft blue, purple, and pink glow.",
+  },
+  {
+    key: "ocean",
+    label: "Ocean",
+    desc: "Deep blue and cyan calm.",
+  },
+  {
+    key: "rose",
+    label: "Rose",
+    desc: "Warm pink and romantic blush.",
+  },
+  {
+    key: "cosmic",
+    label: "Cosmic",
+    desc: "Dark violet and galaxy purple.",
+  },
+  {
+    key: "forest",
+    label: "Forest",
+    desc: "Emerald green and soft night.",
+  },
+  {
+    key: "sunset",
+    label: "Sunset",
+    desc: "Orange, rose, and evening glow.",
+  },
+] satisfies Array<{
+  key: ThemeKey;
+  label: string;
+  desc: string;
+}>;
 
 // ─── Default Seed Data ─────────────────────────────────────────────────────
 // Keep these only if MovieVaultPage / OurStoryPage still use fallback data.
@@ -146,13 +183,31 @@ export const DASHBOARD_CARDS = [
     title: "Music",
     desc: "Save playlists, Spotify jams, and songs that feel like you two.",
   },
-] satisfies Array<{
-  page: PageKey;
-  icon: string;
-  tag: string;
-  title: string;
-  desc: string;
-}>;
+  {
+    page: "memories",
+    icon: "💌",
+    tag: "MEMORY JAR",
+    title: "Memory Jar",
+    desc: "Save tiny moments, inside jokes, and soft memories that belong only to you two.",
+  },
+  {
+    page: "bucket",
+    icon: "🪣",
+    tag: "DREAMS",
+    title: "Bucket List",
+    desc: "Plan everything you both want to do together, one little dream at a time.",
+  },
+] satisfies DashboardCard[];
+
+// ─── Footer Quotes ─────────────────────────────────────────────────────────
+
+export const FOOTER_QUOTES = [
+  "Some bonds do not need distance to prove they are real.",
+  "Love is not always loud. Sometimes it is a saved message, a remembered date, and a tiny goodnight.",
+  "Two people, one little universe, and a thousand soft moments in between.",
+  "Every day apart is still a day you are choosing each other.",
+  "The sweetest love stories are built in tiny details.",
+] as const;
 
 // ─── Petal Animation Data ──────────────────────────────────────────────────
 

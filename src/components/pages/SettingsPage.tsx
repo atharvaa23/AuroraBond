@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { signOut } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { AVATARS } from "../../lib/constants";
+import { AVATARS, THEME_OPTIONS } from "../../lib/constants";
 import { PetalCanvas } from "../ui/PetalCanvas";
-import type { User, Partner, Bond } from "../../lib/types";
+import type { User, Partner, Bond, ThemeKey } from "../../lib/types";
 import { WeatherLocationSettings } from "../WeatherLocationSettings";
 
 interface SettingsPageProps {
@@ -25,6 +25,10 @@ type BondWithCode = Bond & {
   inviteCode?: string;
   pairingCode?: string;
 };
+
+function cleanText(value?: string | null) {
+  return value?.replace(/\s+/g, " ").trim() ?? "";
+}
 
 const SETTINGS_CSS = `
   .settings-grid {
@@ -96,7 +100,102 @@ const SETTINGS_CSS = `
     background: rgba(192,132,252,0.15);
   }
 
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .theme-option {
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border-radius: 18px;
+    padding: 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.25s ease;
+    font-family: var(--font-sans);
+  }
+
+  .theme-option:hover {
+    border-color: var(--aurora1);
+    transform: translateY(-1px);
+  }
+
+  .theme-option.active {
+    border-color: var(--aurora1);
+    background: linear-gradient(
+      135deg,
+      rgba(192,132,252,0.18),
+      rgba(251,113,133,0.1)
+    );
+  }
+
+  .theme-preview {
+    height: 38px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .theme-name {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .theme-desc {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .theme-preview[data-theme-preview="aurora"] {
+    background:
+      radial-gradient(circle at 20% 25%, #7dd3fc, transparent 34%),
+      radial-gradient(circle at 75% 70%, #fb7185, transparent 36%),
+      linear-gradient(135deg, #050816, #0b1026);
+  }
+
+  .theme-preview[data-theme-preview="ocean"] {
+    background:
+      radial-gradient(circle at 20% 25%, #38bdf8, transparent 34%),
+      radial-gradient(circle at 75% 70%, #818cf8, transparent 36%),
+      linear-gradient(135deg, #03111f, #062033);
+  }
+
+  .theme-preview[data-theme-preview="rose"] {
+    background:
+      radial-gradient(circle at 20% 25%, #f9a8d4, transparent 34%),
+      radial-gradient(circle at 75% 70%, #fb7185, transparent 36%),
+      linear-gradient(135deg, #170712, #25101d);
+  }
+
+  .theme-preview[data-theme-preview="cosmic"] {
+    background:
+      radial-gradient(circle at 20% 25%, #a78bfa, transparent 34%),
+      radial-gradient(circle at 75% 70%, #f0abfc, transparent 36%),
+      linear-gradient(135deg, #08051a, #120a2e);
+  }
+
+  .theme-preview[data-theme-preview="forest"] {
+    background:
+      radial-gradient(circle at 20% 25%, #6ee7b7, transparent 34%),
+      radial-gradient(circle at 75% 70%, #a7f3d0, transparent 36%),
+      linear-gradient(135deg, #04120d, #092019);
+  }
+
+  .theme-preview[data-theme-preview="sunset"] {
+    background:
+      radial-gradient(circle at 20% 25%, #fb923c, transparent 34%),
+      radial-gradient(circle at 75% 70%, #f472b6, transparent 36%),
+      linear-gradient(135deg, #170b08, #28120d);
+  }
+
   .reunion-highlight {
+    width: fit-content;
+    min-width: 130px;
+    margin: 18px auto 0;
     padding: 16px 24px;
     background: rgba(192,132,252,0.1);
     border-radius: 12px;
@@ -124,6 +223,7 @@ const SETTINGS_CSS = `
 
   .settings-action-row {
     display: flex;
+    justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
     margin-top: 16px;
@@ -180,6 +280,28 @@ const SETTINGS_CSS = `
     color: var(--muted);
     font-size: 13px;
     line-height: 1.6;
+  }
+
+  .reunion-date-block {
+    max-width: 430px;
+    margin: 0 auto;
+  }
+
+  .settings-save-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 32px;
+  }
+
+  .settings-save-wrap .save-btn {
+    max-width: 300px;
+    width: 100%;
+  }
+
+  @media (max-width: 760px) {
+    .theme-grid {
+      grid-template-columns: 1fr;
+    }
   }
 `;
 
@@ -286,6 +408,7 @@ export function SettingsPage({
     avatar: partner?.avatar ?? "🌸",
   });
 
+  const [theme, setTheme] = useState<ThemeKey>(bond?.theme ?? "aurora");
   const [reunion, setReunion] = useState(reunionDate ?? "");
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -323,33 +446,66 @@ export function SettingsPage({
   }, [partner, bond?.nicknames]);
 
   useEffect(() => {
+    setTheme(bond?.theme ?? "aurora");
+  }, [bond?.theme]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("aurora-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
     setReunion(reunionDate ?? "");
   }, [reunionDate]);
 
   const save = async () => {
     if (!auth.currentUser || !user?.bondId || !user?.uid) return;
 
+    const cleanedMyName = cleanText(myForm.name) || cleanText(user.name) || "You";
+    const cleanedMyNickname = cleanText(myForm.nickname) || cleanedMyName;
+
+    const cleanedPartnerName =
+      cleanText(partForm.name) || cleanText(partner?.name) || "Partner";
+
+    const cleanedPartnerNickname =
+      cleanText(partForm.nickname) || cleanedPartnerName;
+
     const newUser: User = {
       ...(user as User),
-      ...myForm,
+      name: cleanedMyName,
+      nickname: cleanedMyNickname,
+      avatar: myForm.avatar,
     };
 
     await updateDoc(doc(db, "users", auth.currentUser.uid), {
-      name: myForm.name,
-      nickname: myForm.nickname,
+      name: cleanedMyName,
+      nickname: cleanedMyNickname,
       avatar: myForm.avatar,
     });
 
     const bondUpdates: Record<string, string> = {
       reunionDate: reunion,
-      [`nicknames.${user.uid}`]: myForm.nickname,
+      theme,
+      [`nicknames.${user.uid}`]: cleanedMyNickname,
     };
 
     if (partner?.uid) {
-      bondUpdates[`nicknames.${partner.uid}`] = partForm.nickname;
+      bondUpdates[`nicknames.${partner.uid}`] = cleanedPartnerNickname;
     }
 
     await updateDoc(doc(db, "bonds", user.bondId), bondUpdates);
+
+    setMyForm({
+      name: cleanedMyName,
+      nickname: cleanedMyNickname,
+      avatar: myForm.avatar,
+    });
+
+    setPartForm((current) => ({
+      ...current,
+      name: cleanedPartnerName,
+      nickname: cleanedPartnerNickname,
+    }));
 
     setUser(newUser);
     setReunionDate(reunion);
@@ -425,6 +581,35 @@ export function SettingsPage({
             />
 
             <div className="settings-card settings-wide">
+              <div className="settings-card-title">Shared App Theme</div>
+
+              <div className="settings-muted" style={{ marginBottom: 18 }}>
+                This theme is shared by both of you. When one person changes it,
+                AuroraBond updates for the bond.
+              </div>
+
+              <div className="theme-grid">
+                {THEME_OPTIONS.map((option) => (
+                  <button
+                    key={option.key}
+                    className={`theme-option ${theme === option.key ? "active" : ""
+                      }`}
+                    type="button"
+                    onClick={() => setTheme(option.key)}
+                  >
+                    <div
+                      className="theme-preview"
+                      data-theme-preview={option.key}
+                    />
+
+                    <div className="theme-name">{option.label}</div>
+                    <div className="theme-desc">{option.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-card settings-wide">
               <div className="settings-card-title">Bonding Code</div>
 
               {bondingCode ? (
@@ -455,23 +640,14 @@ export function SettingsPage({
             <div className="settings-card settings-wide">
               <div className="settings-card-title">Reunion Countdown</div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 16,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <label className="input-label">Reunion Date &amp; Time</label>
-                  <input
-                    className="input-field"
-                    type="datetime-local"
-                    value={reunion}
-                    onChange={(e) => setReunion(e.target.value)}
-                  />
-                </div>
+              <div className="reunion-date-block">
+                <label className="input-label">Reunion Date &amp; Time</label>
+                <input
+                  className="input-field"
+                  type="datetime-local"
+                  value={reunion}
+                  onChange={(e) => setReunion(e.target.value)}
+                />
 
                 {daysToGo !== null && (
                   <div className="reunion-highlight">
@@ -523,21 +699,19 @@ export function SettingsPage({
             </div>
           </div>
 
-          <button
-            className="save-btn"
-            style={{
-              maxWidth: 300,
-              marginTop: 32,
-              display: "block",
-            }}
-            onClick={save}
-          >
-            {saved ? (
-              <span className="save-success">✓ Saved!</span>
-            ) : (
-              "Save Changes"
-            )}
-          </button>
+          <div className="settings-save-wrap">
+            <button
+              className="save-btn"
+              type="button"
+              onClick={save}
+            >
+              {saved ? (
+                <span className="save-success">✓ Saved!</span>
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </>

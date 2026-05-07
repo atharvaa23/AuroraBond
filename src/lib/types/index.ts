@@ -54,6 +54,8 @@ export interface Bond {
   quote1?: string;
   quote2?: string;
 
+  theme?: ThemeKey;
+
   nicknames?: Record<string, string>;
   weatherCities?: Record<string, string>;
   currentMoods?: Record<string, BondMood>;
@@ -119,6 +121,24 @@ export interface MusicLink {
   createdAt?: Timestamp | null;
 }
 
+export interface MemoryItem {
+  id: string;
+  text: string;
+  createdBy: string;
+  authorName: string;
+  authorAvatar: string;
+  createdAt?: Timestamp | null;
+}
+
+export interface BucketItem {
+  id: string;
+  text: string;
+  done: boolean;
+  createdBy: string;
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
+}
+
 // ─── Page / Navigation Types ───────────────────────────────────────────────
 
 export type PageKey =
@@ -131,9 +151,29 @@ export type PageKey =
   | "games"
   | "music"
   | "story"
-  | "settings";
+  | "settings"
+  | "memories"
+  | "bucket";
 
 export type NavigateMode = "push" | "replace";
+
+export type ThemeKey =
+  | "aurora"
+  | "moonlight"
+  | "breeze"
+  | "ocean"
+  | "rose"
+  | "cosmic"
+  | "forest"
+  | "sunset";
+
+export interface DashboardCard {
+  page: PageKey;
+  icon: string;
+  tag: string;
+  title: string;
+  desc: string;
+}
 
 // ─── Shared Prop Interfaces ────────────────────────────────────────────────
 
