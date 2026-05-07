@@ -282,8 +282,13 @@
   --font-sans: 'DM Sans', system-ui, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* ─── Base ───────────────────────────────────────────────────────────────── */
 body {
+  overscroll-behavior-y: none;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
@@ -293,37 +298,9 @@ body {
 }
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */
-@keyframes petalFall {
-  0% {
-    transform: translateY(-60px) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
 
-  10% {
-    opacity: 1;
-  }
 
-  90% {
-    opacity: 0.7;
-  }
 
-  100% {
-    transform: translateY(110vh) translateX(var(--sway)) rotate(var(--rot));
-    opacity: 0;
-  }
-}
-
-@keyframes sway {
-
-  0%,
-  100% {
-    margin-left: 0;
-  }
-
-  50% {
-    margin-left: var(--sw);
-  }
-}
 
 @keyframes auroraShift {
 
@@ -447,41 +424,7 @@ body {
   overflow: hidden;
 }
 
-/* ─── Theme Backdrop Layer ───────────────────────────────────────────────── */
-.theme-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  overflow: hidden;
-}
 
-.theme-float {
-  position: absolute;
-  opacity: 0.55;
-  filter: blur(0.1px);
-  animation: themeFloat 12s linear infinite;
-}
-
-@keyframes themeFloat {
-  from {
-    transform: translate3d(0, 110vh, 0) rotate(0deg);
-    opacity: 0;
-  }
-
-  10% {
-    opacity: 0.7;
-  }
-
-  90% {
-    opacity: 0.55;
-  }
-
-  to {
-    transform: translate3d(var(--drift), -120px, 0) rotate(var(--spin));
-    opacity: 0;
-  }
-}
 
 /* ─── Shared Components ──────────────────────────────────────────────────── */
 .gradient-text {
