@@ -12,7 +12,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import type { User, Partner, Bond } from "../../lib/types";
 
 interface MusicPageProps {
@@ -423,7 +423,7 @@ export function MusicPage({ user, partner, bond }: MusicPageProps) {
 
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="music-wrap">
           <div className="page-title">

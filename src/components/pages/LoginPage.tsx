@@ -17,7 +17,7 @@ import {
 import { auth, db } from "@/lib/firebase";
 import type { PageKey, User, Partner, NavigateMode } from "../../lib/types";
 import { AVATARS } from "../../lib/constants";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 
 interface LoginPageProps {
   setPage: (page: PageKey, mode?: NavigateMode) => void;
@@ -361,7 +361,7 @@ export function LoginPage({ setPage, setUser, setPartner }: LoginPageProps) {
 
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="login-wrap">
           <div className="login-card">

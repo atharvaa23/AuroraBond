@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { DASHBOARD_CARDS, FOOTER_QUOTES } from "../../lib/constants";
 import type { Bond, PageKey, Partner, User, NavigateMode } from "../../lib/types";
 import { CountdownClock } from "../ui/CountdownClock";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 
 interface DashboardPageProps {
   setPage: (page: PageKey, mode?: NavigateMode) => void;
@@ -800,7 +800,7 @@ export function DashboardPage({
 
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="dash-wrap">
           <div className="dash-hero">

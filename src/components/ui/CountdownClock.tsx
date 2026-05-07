@@ -16,6 +16,8 @@ interface TimeLeft {
 }
 
 function getTimeLeft(reunionDate: string): TimeLeft | null {
+  if (!reunionDate) return null;
+
   const target = new Date(reunionDate).getTime();
 
   if (Number.isNaN(target)) return null;
@@ -45,7 +47,7 @@ const COUNTDOWN_CSS = `
       radial-gradient(circle at 18% 18%, rgba(96,165,250,0.12), transparent 32%),
       radial-gradient(circle at 82% 74%, rgba(244,114,182,0.13), transparent 36%),
       linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025));
-    border: none;
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: var(--radius-lg);
     padding: 36px;
     backdrop-filter: blur(24px);
@@ -73,7 +75,7 @@ const COUNTDOWN_CSS = `
     font-size: 11px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: var(--aurora1);
+    color: var(--counter1, var(--aurora1));
     margin-bottom: 12px;
     z-index: 1;
   }
@@ -87,7 +89,12 @@ const COUNTDOWN_CSS = `
     margin-bottom: 28px;
     z-index: 1;
     text-align: center;
-    background: linear-gradient(135deg, #60a5fa, #c084fc 48%, #f472b6);
+    background: linear-gradient(
+      135deg,
+      var(--counter1, #60a5fa),
+      var(--counter2, #c084fc) 48%,
+      var(--counter3, #f472b6)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -135,9 +142,9 @@ const COUNTDOWN_CSS = `
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(96,165,250,0.75),
-      rgba(192,132,252,0.8),
-      rgba(244,114,182,0.75),
+      var(--counter1, #60a5fa),
+      var(--counter2, #c084fc),
+      var(--counter3, #f472b6),
       transparent
     );
     opacity: 0.85;
@@ -152,7 +159,12 @@ const COUNTDOWN_CSS = `
     line-height: 1;
     margin-bottom: 10px;
 
-    background: linear-gradient(135deg, #a78bfa, #c084fc 45%, #f0abfc);
+    background: linear-gradient(
+      135deg,
+      var(--counter1, #a78bfa),
+      var(--counter2, #c084fc) 45%,
+      var(--counter3, #f0abfc)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -192,7 +204,6 @@ const COUNTDOWN_CSS = `
   }
 
   .together-card {
-    border: none;
     background:
       radial-gradient(circle at 20% 20%, rgba(96,165,250,0.16), transparent 34%),
       radial-gradient(circle at 80% 75%, rgba(244,114,182,0.16), transparent 38%),
@@ -239,7 +250,11 @@ const COUNTDOWN_CSS = `
     justify-content: center;
     background:
       radial-gradient(circle at 30% 30%, rgba(255,255,255,0.22), rgba(255,255,255,0.06)),
-      linear-gradient(135deg, rgba(192,132,252,0.18), rgba(251,113,133,0.14));
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--counter2, #c084fc) 22%, transparent),
+        color-mix(in srgb, var(--counter3, #fb7185) 16%, transparent)
+      );
     font-size: 28px;
     box-shadow:
       0 0 24px rgba(192,132,252,0.25),
@@ -269,7 +284,12 @@ const COUNTDOWN_CSS = `
   }
 
   .orbit-ball.blue {
-    background: radial-gradient(circle at 28% 26%, #eff6ff, #60a5fa 45%, #2563eb 74%);
+    background: radial-gradient(
+      circle at 28% 26%,
+      rgba(255,255,255,0.95),
+      var(--counter1, #60a5fa) 45%,
+      #2563eb 74%
+    );
     box-shadow:
       0 0 14px rgba(96,165,250,0.95),
       0 0 34px rgba(96,165,250,0.62),
@@ -277,7 +297,12 @@ const COUNTDOWN_CSS = `
   }
 
   .orbit-ball.pink {
-    background: radial-gradient(circle at 28% 26%, #fdf2f8, #f472b6 45%, #db2777 74%);
+    background: radial-gradient(
+      circle at 28% 26%,
+      rgba(255,255,255,0.95),
+      var(--counter3, #f472b6) 45%,
+      #db2777 74%
+    );
     box-shadow:
       0 0 14px rgba(244,114,182,0.95),
       0 0 34px rgba(244,114,182,0.62),
@@ -297,7 +322,12 @@ const COUNTDOWN_CSS = `
     margin-bottom: 16px;
     letter-spacing: 0.3px;
     text-align: center;
-    background: linear-gradient(135deg, #60a5fa, #c084fc 48%, #f472b6);
+    background: linear-gradient(
+      135deg,
+      var(--counter1, #60a5fa),
+      var(--counter2, #c084fc) 48%,
+      var(--counter3, #f472b6)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -338,7 +368,7 @@ const COUNTDOWN_CSS = `
   @keyframes heartBeatDigit {
     0%, 100% {
       transform: scale(1);
-      filter: drop-shadow(0 0 0 rgba(192,132,252,0));
+      filter: drop-shadow(0 0 0 transparent);
     }
 
     18% {

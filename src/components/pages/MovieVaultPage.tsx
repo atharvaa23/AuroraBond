@@ -1,5 +1,5 @@
 "use client";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import { useEffect, useState } from "react";
 import type { Movie, User } from "../../lib/types";
 import {
@@ -215,7 +215,7 @@ export function MovieVaultPage({ user }: MovieVaultPageProps) {
       <style>{MOVIE_CSS}</style>
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="inner-wrap" style={{ maxWidth: 1000 }}>
           <div className="page-title">Movie <span>Vault</span></div>

@@ -2,48 +2,48 @@
 
 import { useEffect, useState } from "react";
 import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    limit,
-    onSnapshot,
-    orderBy,
-    query,
-    serverTimestamp,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import type { Bond, MemoryItem, Partner, User } from "../../lib/types";
 
 interface MemoryJarPageProps {
-    user: User | null;
-    partner: Partner | null;
-    bond: Bond | null;
+  user: User | null;
+  partner: Partner | null;
+  bond: Bond | null;
 }
 
 function cleanText(value?: string | null) {
-    return value?.replace(/\s+/g, " ").trim() ?? "";
+  return value?.replace(/\s+/g, " ").trim() ?? "";
 }
 
 function getDisplayName(
-    nickname?: string | null,
-    name?: string | null,
-    fallback = "You"
+  nickname?: string | null,
+  name?: string | null,
+  fallback = "You"
 ) {
-    const cleanNickname = cleanText(nickname);
-    const cleanName = cleanText(name);
+  const cleanNickname = cleanText(nickname);
+  const cleanName = cleanText(name);
 
-    return cleanNickname || cleanName || fallback;
+  return cleanNickname || cleanName || fallback;
 }
 
 function formatMemoryDate(memory: MemoryItem) {
-    if (!memory.createdAt) return "just now";
+  if (!memory.createdAt) return "just now";
 
-    return memory.createdAt.toDate().toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-    });
+  return memory.createdAt.toDate().toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 const MEMORY_CSS = `
@@ -538,255 +538,255 @@ const MEMORY_CSS = `
 `;
 
 export function MemoryJarPage({ user, partner, bond }: MemoryJarPageProps) {
-    const [memories, setMemories] = useState<MemoryItem[]>([]);
-    const [spotlightMemory, setSpotlightMemory] = useState<MemoryItem | null>(
-        null
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [spotlightMemory, setSpotlightMemory] = useState<MemoryItem | null>(
+    null
+  );
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const maxLength = 220;
+
+  const bondId = user?.bondId;
+  const currentUid = user?.uid;
+
+  const partnerUid =
+    bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
+
+  const myDisplayName = getDisplayName(
+    bond?.nicknames?.[currentUid || ""],
+    user?.name,
+    "You"
+  );
+
+  const partnerDisplayName = getDisplayName(
+    bond?.nicknames?.[partnerUid || ""],
+    partner?.name,
+    "Partner"
+  );
+
+  useEffect(() => {
+    if (!bondId) {
+      setLoading(false);
+      return;
+    }
+
+    const memoriesQuery = query(
+      collection(db, "bonds", bondId, "memories"),
+      orderBy("createdAt", "desc"),
+      limit(30)
     );
-    const [draft, setDraft] = useState("");
-    const [saving, setSaving] = useState(false);
-    const [loading, setLoading] = useState(true);
 
-    const maxLength = 220;
+    const unsubscribe = onSnapshot(
+      memoriesQuery,
+      (snapshot) => {
+        const nextMemories = snapshot.docs.map((memoryDoc) => {
+          const data = memoryDoc.data();
 
-    const bondId = user?.bondId;
-    const currentUid = user?.uid;
+          return {
+            id: memoryDoc.id,
+            text: data.text ?? "",
+            createdBy: data.createdBy ?? "",
+            authorName: data.authorName ?? "Someone",
+            authorAvatar: data.authorAvatar ?? "💌",
+            createdAt: data.createdAt ?? null,
+          } as MemoryItem;
+        });
 
-    const partnerUid =
-        bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
-
-    const myDisplayName = getDisplayName(
-        bond?.nicknames?.[currentUid || ""],
-        user?.name,
-        "You"
+        setMemories(nextMemories);
+        setSpotlightMemory((current) => current ?? nextMemories[0] ?? null);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Memory jar load error:", error);
+        setLoading(false);
+      }
     );
 
-    const partnerDisplayName = getDisplayName(
-        bond?.nicknames?.[partnerUid || ""],
-        partner?.name,
-        "Partner"
-    );
+    return () => unsubscribe();
+  }, [bondId]);
 
-    useEffect(() => {
-        if (!bondId) {
-            setLoading(false);
-            return;
-        }
+  const addMemory = async () => {
+    const text = cleanText(draft);
 
-        const memoriesQuery = query(
-            collection(db, "bonds", bondId, "memories"),
-            orderBy("createdAt", "desc"),
-            limit(30)
-        );
+    if (!text) {
+      alert("Write a memory first.");
+      return;
+    }
 
-        const unsubscribe = onSnapshot(
-            memoriesQuery,
-            (snapshot) => {
-                const nextMemories = snapshot.docs.map((memoryDoc) => {
-                    const data = memoryDoc.data();
+    if (!bondId || !currentUid) {
+      alert("No bond connected yet.");
+      return;
+    }
 
-                    return {
-                        id: memoryDoc.id,
-                        text: data.text ?? "",
-                        createdBy: data.createdBy ?? "",
-                        authorName: data.authorName ?? "Someone",
-                        authorAvatar: data.authorAvatar ?? "💌",
-                        createdAt: data.createdAt ?? null,
-                    } as MemoryItem;
-                });
+    try {
+      setSaving(true);
 
-                setMemories(nextMemories);
-                setSpotlightMemory((current) => current ?? nextMemories[0] ?? null);
-                setLoading(false);
-            },
-            (error) => {
-                console.error("Memory jar load error:", error);
-                setLoading(false);
-            }
-        );
+      await addDoc(collection(db, "bonds", bondId, "memories"), {
+        text,
+        createdBy: currentUid,
+        authorName: myDisplayName,
+        authorAvatar: user?.avatar ?? "💜",
+        createdAt: serverTimestamp(),
+      });
 
-        return () => unsubscribe();
-    }, [bondId]);
+      setDraft("");
+    } catch (error) {
+      console.error("Memory save error:", error);
+      alert("Could not save memory.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const addMemory = async () => {
-        const text = cleanText(draft);
+  const deleteMemory = async (memory: MemoryItem) => {
+    if (!bondId || !currentUid) return;
 
-        if (!text) {
-            alert("Write a memory first.");
-            return;
-        }
+    const confirmDelete = window.confirm("Erase this memory?");
+    if (!confirmDelete) return;
 
-        if (!bondId || !currentUid) {
-            alert("No bond connected yet.");
-            return;
-        }
+    try {
+      await deleteDoc(doc(db, "bonds", bondId, "memories", memory.id));
 
-        try {
-            setSaving(true);
+      if (spotlightMemory?.id === memory.id) {
+        setSpotlightMemory(null);
+      }
+    } catch (error) {
+      console.error("Memory delete error:", error);
+      alert("Could not erase memory.");
+    }
+  };
 
-            await addDoc(collection(db, "bonds", bondId, "memories"), {
-                text,
-                createdBy: currentUid,
-                authorName: myDisplayName,
-                authorAvatar: user?.avatar ?? "💜",
-                createdAt: serverTimestamp(),
-            });
+  const showRandomMemory = () => {
+    if (memories.length === 0) return;
 
-            setDraft("");
-        } catch (error) {
-            console.error("Memory save error:", error);
-            alert("Could not save memory.");
-        } finally {
-            setSaving(false);
-        }
-    };
+    const randomIndex = Math.floor(Math.random() * memories.length);
+    setSpotlightMemory(memories[randomIndex]);
+  };
 
-    const deleteMemory = async (memory: MemoryItem) => {
-        if (!bondId || !currentUid) return;
+  return (
+    <>
+      <style>{MEMORY_CSS}</style>
 
-        const confirmDelete = window.confirm("Erase this memory?");
-        if (!confirmDelete) return;
+      <div className="page">
+        <div className="aurora-bg" />
+        <ThemeBackdrop />
 
-        try {
-            await deleteDoc(doc(db, "bonds", bondId, "memories", memory.id));
+        <div className="memory-wrap">
+          <div className="memory-hero">
+            <div className="memory-title">Memory Jar</div>
 
-            if (spotlightMemory?.id === memory.id) {
-                setSpotlightMemory(null);
-            }
-        } catch (error) {
-            console.error("Memory delete error:", error);
-            alert("Could not erase memory.");
-        }
-    };
-
-    const showRandomMemory = () => {
-        if (memories.length === 0) return;
-
-        const randomIndex = Math.floor(Math.random() * memories.length);
-        setSpotlightMemory(memories[randomIndex]);
-    };
-
-    return (
-        <>
-            <style>{MEMORY_CSS}</style>
-
-            <div className="page">
-                <div className="aurora-bg" />
-                <PetalCanvas />
-
-                <div className="memory-wrap">
-                    <div className="memory-hero">
-                        <div className="memory-title">Memory Jar</div>
-
-                        <div className="memory-sub">
-                            A soft little place for {myDisplayName} and {partnerDisplayName} —
-                            tiny moments, inside jokes, late-night words, and memories that
-                            only make sense to the two of you.
-                        </div>
-                    </div>
-
-                    <div className="memory-create-card">
-                        <div className="memory-create-inner">
-                            <div className="memory-jar-visual">
-                                <span className="jar-shine" />
-                                <span className="jar-heart jar-heart-one">♡</span>
-                                <span className="jar-heart jar-heart-two">♡</span>
-                                <span className="jar-heart jar-heart-three">♡</span>
-                            </div>
-
-                            <div className="memory-form">
-                                <div className="memory-input-wrap">
-                                    <textarea
-                                        className="memory-input"
-                                        maxLength={maxLength}
-                                        value={draft}
-                                        onChange={(event) => setDraft(event.target.value)}
-                                        placeholder="Write a tiny memory… maybe a joke, a moment, or something you miss."
-                                    />
-
-                                    <div className="memory-count">
-                                        {draft.length}/{maxLength}
-                                    </div>
-                                </div>
-
-                                <button
-                                    className="memory-save-btn"
-                                    type="button"
-                                    onClick={addMemory}
-                                    disabled={saving}
-                                >
-                                    {saving ? "Saving..." : "Drop in Jar 💌"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="memory-toolbar">
-                        <div className="memory-section-title">Saved Moments</div>
-
-                        <button
-                            className="memory-random-btn"
-                            type="button"
-                            onClick={showRandomMemory}
-                            disabled={memories.length === 0}
-                        >
-                            Shuffle a memory ✨
-                        </button>
-                    </div>
-
-                    <div className="memory-spotlight">
-                        <div className="memory-spotlight-icon">💌</div>
-                        <div className="memory-spotlight-label">Soft reminder</div>
-
-                        {spotlightMemory ? (
-                            <>
-                                <div className="memory-spotlight-text">
-                                    “{spotlightMemory.text}”
-                                </div>
-
-                                <div className="memory-spotlight-meta">
-                                    — {spotlightMemory.authorAvatar} {spotlightMemory.authorName},{" "}
-                                    {formatMemoryDate(spotlightMemory)}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="memory-spotlight-text memory-spotlight-empty">
-                                Your first memory is waiting to be written…
-                            </div>
-                        )}
-                    </div>
-
-                    {loading ? (
-                        <div className="memory-loading">Opening the jar...</div>
-                    ) : memories.length > 0 ? (
-                        <div className="memory-grid">
-                            {memories.map((memory) => (
-                                <div className="memory-note" key={memory.id}>
-                                    <div className="memory-note-text">“{memory.text}”</div>
-
-                                    <div className="memory-note-meta">
-                                        <span>
-                                            {memory.authorAvatar} {memory.authorName}
-                                        </span>
-                                        <span>{formatMemoryDate(memory)}</span>
-                                    </div>
-
-                                    <button
-                                        className="memory-delete-btn"
-                                        type="button"
-                                        onClick={() => deleteMemory(memory)}
-                                    >
-                                        Erase memory
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="memory-empty">
-                            No memories yet. Drop the first one into the jar ✨
-                        </div>
-                    )}
-                </div>
+            <div className="memory-sub">
+              A soft little place for {myDisplayName} and {partnerDisplayName} —
+              tiny moments, inside jokes, late-night words, and memories that
+              only make sense to the two of you.
             </div>
-        </>
-    );
+          </div>
+
+          <div className="memory-create-card">
+            <div className="memory-create-inner">
+              <div className="memory-jar-visual">
+                <span className="jar-shine" />
+                <span className="jar-heart jar-heart-one">♡</span>
+                <span className="jar-heart jar-heart-two">♡</span>
+                <span className="jar-heart jar-heart-three">♡</span>
+              </div>
+
+              <div className="memory-form">
+                <div className="memory-input-wrap">
+                  <textarea
+                    className="memory-input"
+                    maxLength={maxLength}
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder="Write a tiny memory… maybe a joke, a moment, or something you miss."
+                  />
+
+                  <div className="memory-count">
+                    {draft.length}/{maxLength}
+                  </div>
+                </div>
+
+                <button
+                  className="memory-save-btn"
+                  type="button"
+                  onClick={addMemory}
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Drop in Jar 💌"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="memory-toolbar">
+            <div className="memory-section-title">Saved Moments</div>
+
+            <button
+              className="memory-random-btn"
+              type="button"
+              onClick={showRandomMemory}
+              disabled={memories.length === 0}
+            >
+              Shuffle a memory ✨
+            </button>
+          </div>
+
+          <div className="memory-spotlight">
+            <div className="memory-spotlight-icon">💌</div>
+            <div className="memory-spotlight-label">Soft reminder</div>
+
+            {spotlightMemory ? (
+              <>
+                <div className="memory-spotlight-text">
+                  “{spotlightMemory.text}”
+                </div>
+
+                <div className="memory-spotlight-meta">
+                  — {spotlightMemory.authorAvatar} {spotlightMemory.authorName},{" "}
+                  {formatMemoryDate(spotlightMemory)}
+                </div>
+              </>
+            ) : (
+              <div className="memory-spotlight-text memory-spotlight-empty">
+                Your first memory is waiting to be written…
+              </div>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="memory-loading">Opening the jar...</div>
+          ) : memories.length > 0 ? (
+            <div className="memory-grid">
+              {memories.map((memory) => (
+                <div className="memory-note" key={memory.id}>
+                  <div className="memory-note-text">“{memory.text}”</div>
+
+                  <div className="memory-note-meta">
+                    <span>
+                      {memory.authorAvatar} {memory.authorName}
+                    </span>
+                    <span>{formatMemoryDate(memory)}</span>
+                  </div>
+
+                  <button
+                    className="memory-delete-btn"
+                    type="button"
+                    onClick={() => deleteMemory(memory)}
+                  >
+                    Erase memory
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="memory-empty">
+              No memories yet. Drop the first one into the jar ✨
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }

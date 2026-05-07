@@ -46,9 +46,10 @@ const NAV_CSS = `
     justify-content: space-between;
 
     padding: 0 40px;
-    background: rgba(7, 4, 15, 0.72);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
+    background: var(--nav-bg);
+    backdrop-filter: blur(22px);
+    border-bottom: 1px solid var(--nav-border);
+    box-shadow: var(--nav-shadow);
   }
 
   .nav-logo {
@@ -80,13 +81,13 @@ const NAV_CSS = `
     align-items: center;
     justify-content: center;
     gap: 10px;
-}
+  }
 
   .nav-btn {
     position: relative;
 
     border: 1px solid var(--border);
-    background: transparent;
+    background: color-mix(in srgb, var(--bg2) 36%, transparent);
     color: var(--muted);
 
     padding: 6px 16px;
@@ -109,13 +110,19 @@ const NAV_CSS = `
   .nav-btn:hover {
     border-color: var(--aurora1);
     color: var(--aurora1);
-    background: rgba(192, 132, 252, 0.08);
+    background: color-mix(in srgb, var(--aurora1) 10%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--aurora1) 18%, transparent);
   }
 
   .nav-btn.active {
     border-color: var(--aurora1);
-    color: var(--aurora1);
-    background: rgba(192, 132, 252, 0.1);
+    color: var(--text);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--aurora1) 18%, transparent),
+      color-mix(in srgb, var(--aurora3) 10%, transparent)
+    );
+    box-shadow: 0 0 18px color-mix(in srgb, var(--aurora1) 16%, transparent);
   }
 
   .nav-avatar {
@@ -130,15 +137,17 @@ const NAV_CSS = `
 
     cursor: pointer;
     font-size: 14px;
-    background: rgba(192, 132, 252, 0.15);
+    background: color-mix(in srgb, var(--aurora1) 16%, transparent);
     transition: all 0.25s ease;
     flex-shrink: 0;
     text-decoration: none;
+    box-shadow: 0 0 16px color-mix(in srgb, var(--aurora1) 10%, transparent);
   }
 
   .nav-avatar:hover {
     border-color: var(--aurora2);
     transform: scale(1.05);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--aurora2) 20%, transparent);
   }
 
   .nav-unread-dot {
@@ -150,8 +159,8 @@ const NAV_CSS = `
     height: 9px;
     border-radius: 50%;
 
-    background: #fb7185;
-    box-shadow: 0 0 12px rgba(251, 113, 133, 0.8);
+    background: var(--aurora3);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--aurora3) 80%, transparent);
   }
 
   .mobile-nav-tabs {
@@ -202,11 +211,11 @@ const NAV_CSS = `
 
       padding: 9px;
 
-      background: rgba(7, 4, 15, 0.88);
-      border: 1px solid var(--border);
+      background: var(--mobile-nav-bg);
+      border: 1px solid var(--nav-border);
       border-radius: 24px;
       backdrop-filter: blur(24px);
-      box-shadow: 0 14px 45px rgba(0, 0, 0, 0.45);
+      box-shadow: var(--mobile-nav-shadow);
     }
 
     .mobile-nav-tabs .nav-btn {

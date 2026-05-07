@@ -23,7 +23,14 @@ import {
 } from "firebase/firestore";
 import { usePathname, useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import type { Bond, NavigateMode, PageKey, Partner, User } from "@/lib/types";
+import type {
+    Bond,
+    NavigateMode,
+    PageKey,
+    Partner,
+    ThemeKey,
+    User,
+} from "@/lib/types";
 
 interface AuroraContextValue {
     user: User | null;
@@ -56,6 +63,20 @@ const PAGE_TO_PATH: Record<PageKey, string> = {
 
 const PUBLIC_AUTH_PAGES = ["/", "/login"];
 const HEARTBEAT_INTERVAL = 20_000;
+const DEFAULT_THEME: ThemeKey = "aurora";
+
+function isThemeKey(value: string | null | undefined): value is ThemeKey {
+    return (
+        value === "aurora" ||
+        value === "moonlight" ||
+        value === "breeze" ||
+        value === "ocean" ||
+        value === "rose" ||
+        value === "cosmic" ||
+        value === "forest" ||
+        value === "sunset"
+    );
+}
 
 export function AuroraProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
@@ -93,6 +114,19 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
             setHasUnreadChat(false);
         }
     }, [pathname]);
+
+    useEffect(() => {
+        const savedTheme =
+            bond?.theme ||
+            (typeof window !== "undefined"
+                ? window.localStorage.getItem("aurora-theme")
+                : null);
+
+        const theme = isThemeKey(savedTheme) ? savedTheme : DEFAULT_THEME;
+
+        document.documentElement.dataset.theme = theme;
+        window.localStorage.setItem("aurora-theme", theme);
+    }, [bond?.theme]);
 
     useEffect(() => {
         if (!user) return;

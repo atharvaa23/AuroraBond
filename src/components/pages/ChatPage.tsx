@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { User, Partner, Bond } from "../../lib/types";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 
 interface ChatPageProps {
   user: User | null;
@@ -659,7 +659,7 @@ export function ChatPage({ user, partner, bond }: ChatPageProps) {
 
       <div className="page chat-page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="inner-wrap chat-shell">
           <div className="chat-header">

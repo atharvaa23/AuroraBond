@@ -11,7 +11,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 
 interface OurStoryPageProps {
   user: User | null;
@@ -114,7 +114,7 @@ export function OurStoryPage({ user, partner }: OurStoryPageProps) {
       <style>{STORY_CSS}</style>
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="inner-wrap">
           <div className="page-title">Our <span>Story</span></div>

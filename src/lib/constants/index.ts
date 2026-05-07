@@ -19,36 +19,48 @@ export const AVATARS = [
   "🦄",
 ] as const;
 
+// ─── Theme Options ─────────────────────────────────────────────────────────
+
 export const THEME_OPTIONS = [
   {
     key: "aurora",
     label: "Aurora",
-    desc: "Soft blue, purple, and pink glow.",
+    desc: "Soft blue, purple, and pink glow with petals.",
+  },
+  {
+    key: "moonlight",
+    label: "Moonlight",
+    desc: "Dark night, silver moon, stars, and calm glow.",
+  },
+  {
+    key: "breeze",
+    label: "Breeze",
+    desc: "Airy cyan, soft clouds, and floating wind streaks.",
   },
   {
     key: "ocean",
     label: "Ocean",
-    desc: "Deep blue and cyan calm.",
+    desc: "Deep blue, cyan calm, waves, and bubbles.",
   },
   {
     key: "rose",
     label: "Rose",
-    desc: "Warm pink and romantic blush.",
+    desc: "Warm pink, romantic blush, and soft hearts.",
   },
   {
     key: "cosmic",
     label: "Cosmic",
-    desc: "Dark violet and galaxy purple.",
+    desc: "Dark violet, galaxy purple, and star dust.",
   },
   {
     key: "forest",
     label: "Forest",
-    desc: "Emerald green and soft night.",
+    desc: "Emerald green, soft night, and firefly glow.",
   },
   {
     key: "sunset",
     label: "Sunset",
-    desc: "Orange, rose, and evening glow.",
+    desc: "Orange, rose, and warm evening glow.",
   },
 ] satisfies Array<{
   key: ThemeKey;

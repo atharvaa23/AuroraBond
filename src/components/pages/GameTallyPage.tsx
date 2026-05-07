@@ -14,7 +14,7 @@ import {
     updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import type { User, Partner, Bond } from "../../lib/types";
 
 interface GameTallyPageProps {
@@ -349,7 +349,7 @@ export function GameTallyPage({ user, partner, bond }: GameTallyPageProps) {
 
             <div className="page">
                 <div className="aurora-bg" />
-                <PetalCanvas />
+                <ThemeBackdrop />
 
                 <div className="game-wrap">
                     <div className="page-title">

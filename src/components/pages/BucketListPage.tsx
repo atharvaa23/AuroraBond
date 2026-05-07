@@ -2,41 +2,41 @@
 
 import { useEffect, useState } from "react";
 import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    onSnapshot,
-    orderBy,
-    query,
-    serverTimestamp,
-    updateDoc,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import type { Bond, BucketItem, Partner, User } from "../../lib/types";
 
 interface BucketListPageProps {
-    user: User | null;
-    partner: Partner | null;
-    bond: Bond | null;
+  user: User | null;
+  partner: Partner | null;
+  bond: Bond | null;
 }
 
 type BucketFilter = "all" | "completed" | "pending";
 
 function cleanText(value?: string | null) {
-    return value?.replace(/\s+/g, " ").trim() ?? "";
+  return value?.replace(/\s+/g, " ").trim() ?? "";
 }
 
 function getDisplayName(
-    nickname?: string | null,
-    name?: string | null,
-    fallback = "You"
+  nickname?: string | null,
+  name?: string | null,
+  fallback = "You"
 ) {
-    const cleanNickname = cleanText(nickname);
-    const cleanName = cleanText(name);
+  const cleanNickname = cleanText(nickname);
+  const cleanName = cleanText(name);
 
-    return cleanNickname || cleanName || fallback;
+  return cleanNickname || cleanName || fallback;
 }
 
 const BUCKET_CSS = `
@@ -433,276 +433,276 @@ const BUCKET_CSS = `
 `;
 
 export function BucketListPage({ user, partner, bond }: BucketListPageProps) {
-    const [items, setItems] = useState<BucketItem[]>([]);
-    const [draft, setDraft] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [filter, setFilter] = useState<BucketFilter>("all");
+  const [items, setItems] = useState<BucketItem[]>([]);
+  const [draft, setDraft] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<BucketFilter>("all");
 
-    const bondId = user?.bondId;
-    const currentUid = user?.uid;
+  const bondId = user?.bondId;
+  const currentUid = user?.uid;
 
-    const partnerUid =
-        bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
+  const partnerUid =
+    bond?.user1Uid === currentUid ? bond?.user2Uid : bond?.user1Uid;
 
-    const myDisplayName = getDisplayName(
-        bond?.nicknames?.[currentUid || ""],
-        user?.name,
-        "You"
+  const myDisplayName = getDisplayName(
+    bond?.nicknames?.[currentUid || ""],
+    user?.name,
+    "You"
+  );
+
+  const partnerDisplayName = getDisplayName(
+    bond?.nicknames?.[partnerUid || ""],
+    partner?.name,
+    "Partner"
+  );
+
+  const completedCount = items.filter((item) => item.done).length;
+  const pendingCount = items.length - completedCount;
+
+  const filteredItems = items.filter((item) => {
+    if (filter === "completed") return item.done;
+    if (filter === "pending") return !item.done;
+    return true;
+  });
+
+  useEffect(() => {
+    if (!bondId) {
+      setLoading(false);
+      return;
+    }
+
+    const bucketQuery = query(
+      collection(db, "bonds", bondId, "bucketList"),
+      orderBy("createdAt", "desc")
     );
 
-    const partnerDisplayName = getDisplayName(
-        bond?.nicknames?.[partnerUid || ""],
-        partner?.name,
-        "Partner"
+    const unsubscribe = onSnapshot(
+      bucketQuery,
+      (snapshot) => {
+        const nextItems = snapshot.docs.map((itemDoc) => {
+          const data = itemDoc.data();
+
+          return {
+            id: itemDoc.id,
+            text: data.text ?? "",
+            done: data.done ?? false,
+            createdBy: data.createdBy ?? "",
+            createdAt: data.createdAt ?? null,
+            updatedAt: data.updatedAt ?? null,
+          } as BucketItem;
+        });
+
+        setItems(nextItems);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Bucket list load error:", error);
+        setLoading(false);
+      }
     );
 
-    const completedCount = items.filter((item) => item.done).length;
-    const pendingCount = items.length - completedCount;
+    return () => unsubscribe();
+  }, [bondId]);
 
-    const filteredItems = items.filter((item) => {
-        if (filter === "completed") return item.done;
-        if (filter === "pending") return !item.done;
-        return true;
-    });
+  const addItem = async () => {
+    const text = cleanText(draft);
 
-    useEffect(() => {
-        if (!bondId) {
-            setLoading(false);
-            return;
-        }
+    if (!text) {
+      alert("Write one bucket list idea first.");
+      return;
+    }
 
-        const bucketQuery = query(
-            collection(db, "bonds", bondId, "bucketList"),
-            orderBy("createdAt", "desc")
-        );
+    if (!bondId || !currentUid) {
+      alert("No bond connected yet.");
+      return;
+    }
 
-        const unsubscribe = onSnapshot(
-            bucketQuery,
-            (snapshot) => {
-                const nextItems = snapshot.docs.map((itemDoc) => {
-                    const data = itemDoc.data();
+    try {
+      setSaving(true);
 
-                    return {
-                        id: itemDoc.id,
-                        text: data.text ?? "",
-                        done: data.done ?? false,
-                        createdBy: data.createdBy ?? "",
-                        createdAt: data.createdAt ?? null,
-                        updatedAt: data.updatedAt ?? null,
-                    } as BucketItem;
-                });
+      await addDoc(collection(db, "bonds", bondId, "bucketList"), {
+        text,
+        done: false,
+        createdBy: currentUid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
-                setItems(nextItems);
-                setLoading(false);
-            },
-            (error) => {
-                console.error("Bucket list load error:", error);
-                setLoading(false);
-            }
-        );
+      setDraft("");
+      setFilter("all");
+    } catch (error) {
+      console.error("Bucket item save error:", error);
+      alert("Could not save bucket item.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-        return () => unsubscribe();
-    }, [bondId]);
+  const toggleItem = async (item: BucketItem) => {
+    if (!bondId) return;
 
-    const addItem = async () => {
-        const text = cleanText(draft);
+    try {
+      await updateDoc(doc(db, "bonds", bondId, "bucketList", item.id), {
+        done: !item.done,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Bucket item update error:", error);
+      alert("Could not update bucket item.");
+    }
+  };
 
-        if (!text) {
-            alert("Write one bucket list idea first.");
-            return;
-        }
+  const deleteItem = async (item: BucketItem) => {
+    if (!bondId) return;
 
-        if (!bondId || !currentUid) {
-            alert("No bond connected yet.");
-            return;
-        }
+    const confirmDelete = window.confirm("Erase this bucket list item?");
+    if (!confirmDelete) return;
 
-        try {
-            setSaving(true);
+    try {
+      await deleteDoc(doc(db, "bonds", bondId, "bucketList", item.id));
+    } catch (error) {
+      console.error("Bucket item delete error:", error);
+      alert("Could not erase bucket item.");
+    }
+  };
 
-            await addDoc(collection(db, "bonds", bondId, "bucketList"), {
-                text,
-                done: false,
-                createdBy: currentUid,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            });
+  return (
+    <>
+      <style>{BUCKET_CSS}</style>
 
-            setDraft("");
-            setFilter("all");
-        } catch (error) {
-            console.error("Bucket item save error:", error);
-            alert("Could not save bucket item.");
-        } finally {
-            setSaving(false);
-        }
-    };
+      <div className="page">
+        <div className="aurora-bg" />
+        <ThemeBackdrop />
 
-    const toggleItem = async (item: BucketItem) => {
-        if (!bondId) return;
+        <div className="bucket-wrap">
+          <div className="bucket-hero">
+            <div className="bucket-title">Bucket List</div>
 
-        try {
-            await updateDoc(doc(db, "bonds", bondId, "bucketList", item.id), {
-                done: !item.done,
-                updatedAt: serverTimestamp(),
-            });
-        } catch (error) {
-            console.error("Bucket item update error:", error);
-            alert("Could not update bucket item.");
-        }
-    };
-
-    const deleteItem = async (item: BucketItem) => {
-        if (!bondId) return;
-
-        const confirmDelete = window.confirm("Erase this bucket list item?");
-        if (!confirmDelete) return;
-
-        try {
-            await deleteDoc(doc(db, "bonds", bondId, "bucketList", item.id));
-        } catch (error) {
-            console.error("Bucket item delete error:", error);
-            alert("Could not erase bucket item.");
-        }
-    };
-
-    return (
-        <>
-            <style>{BUCKET_CSS}</style>
-
-            <div className="page">
-                <div className="aurora-bg" />
-                <PetalCanvas />
-
-                <div className="bucket-wrap">
-                    <div className="bucket-hero">
-                        <div className="bucket-title">Bucket List</div>
-
-                        <div className="bucket-sub">
-                            A shared little list for {myDisplayName} and {partnerDisplayName} —
-                            places to go, food to try, dates to plan, and memories waiting to
-                            happen.
-                        </div>
-                    </div>
-
-                    <div className="bucket-create-card">
-                        <div className="bucket-create-inner">
-                            <div className="bucket-icon-scene">
-                                <span className="bucket-spark bucket-spark-one">✦</span>
-                                <span className="bucket-spark bucket-spark-two">✦</span>
-                                <span className="bucket-spark bucket-spark-three">✦</span>
-                            </div>
-
-                            <div className="bucket-form">
-                                <input
-                                    className="bucket-input"
-                                    value={draft}
-                                    onChange={(event) => setDraft(event.target.value)}
-                                    onKeyDown={(event) => {
-                                        if (event.key === "Enter") addItem();
-                                    }}
-                                    placeholder="Add a dream… like cafe date, movie night, road trip..."
-                                />
-
-                                <button
-                                    className="bucket-add-btn"
-                                    type="button"
-                                    onClick={addItem}
-                                    disabled={saving}
-                                >
-                                    {saving ? "Saving..." : "Add Dream ✨"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bucket-top-row">
-                        <div>
-                            <div className="bucket-section-title">Dreams Together</div>
-
-                            <div className="bucket-count">
-                                {completedCount}/{items.length} completed · {pendingCount} pending
-                            </div>
-                        </div>
-
-                        <div className="bucket-filter-row">
-                            <button
-                                className={`bucket-filter-btn ${filter === "all" ? "active" : ""}`}
-                                type="button"
-                                onClick={() => setFilter("all")}
-                            >
-                                All
-                            </button>
-
-                            <button
-                                className={`bucket-filter-btn ${filter === "completed" ? "active" : ""
-                                    }`}
-                                type="button"
-                                onClick={() => setFilter("completed")}
-                            >
-                                Completed
-                            </button>
-
-                            <button
-                                className={`bucket-filter-btn ${filter === "pending" ? "active" : ""
-                                    }`}
-                                type="button"
-                                onClick={() => setFilter("pending")}
-                            >
-                                Pending
-                            </button>
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <div className="bucket-loading">Opening your shared list...</div>
-                    ) : items.length > 0 ? (
-                        filteredItems.length > 0 ? (
-                            <div className="bucket-list">
-                                {filteredItems.map((item) => (
-                                    <div className="bucket-item" key={item.id}>
-                                        <button
-                                            className={`bucket-check-btn ${item.done ? "done" : ""}`}
-                                            type="button"
-                                            onClick={() => toggleItem(item)}
-                                            title={item.done ? "Mark incomplete" : "Mark done"}
-                                        >
-                                            {item.done ? "✓" : ""}
-                                        </button>
-
-                                        <div>
-                                            <div className={`bucket-text ${item.done ? "done" : ""}`}>
-                                                {item.text}
-                                            </div>
-
-                                            <div className="bucket-meta">
-                                                {item.done ? "Completed dream" : "Waiting to happen"}
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            className="bucket-delete-btn"
-                                            type="button"
-                                            onClick={() => deleteItem(item)}
-                                        >
-                                            Erase
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bucket-empty">
-                                No {filter === "completed" ? "completed" : "pending"} dreams here yet.
-                            </div>
-                        )
-                    ) : (
-                        <div className="bucket-empty">
-                            No dreams added yet. Add the first tiny plan ✨
-                        </div>
-                    )}
-                </div>
+            <div className="bucket-sub">
+              A shared little list for {myDisplayName} and {partnerDisplayName} —
+              places to go, food to try, dates to plan, and memories waiting to
+              happen.
             </div>
-        </>
-    );
+          </div>
+
+          <div className="bucket-create-card">
+            <div className="bucket-create-inner">
+              <div className="bucket-icon-scene">
+                <span className="bucket-spark bucket-spark-one">✦</span>
+                <span className="bucket-spark bucket-spark-two">✦</span>
+                <span className="bucket-spark bucket-spark-three">✦</span>
+              </div>
+
+              <div className="bucket-form">
+                <input
+                  className="bucket-input"
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") addItem();
+                  }}
+                  placeholder="Add a dream… like cafe date, movie night, road trip..."
+                />
+
+                <button
+                  className="bucket-add-btn"
+                  type="button"
+                  onClick={addItem}
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Add Dream ✨"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bucket-top-row">
+            <div>
+              <div className="bucket-section-title">Dreams Together</div>
+
+              <div className="bucket-count">
+                {completedCount}/{items.length} completed · {pendingCount} pending
+              </div>
+            </div>
+
+            <div className="bucket-filter-row">
+              <button
+                className={`bucket-filter-btn ${filter === "all" ? "active" : ""}`}
+                type="button"
+                onClick={() => setFilter("all")}
+              >
+                All
+              </button>
+
+              <button
+                className={`bucket-filter-btn ${filter === "completed" ? "active" : ""
+                  }`}
+                type="button"
+                onClick={() => setFilter("completed")}
+              >
+                Completed
+              </button>
+
+              <button
+                className={`bucket-filter-btn ${filter === "pending" ? "active" : ""
+                  }`}
+                type="button"
+                onClick={() => setFilter("pending")}
+              >
+                Pending
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="bucket-loading">Opening your shared list...</div>
+          ) : items.length > 0 ? (
+            filteredItems.length > 0 ? (
+              <div className="bucket-list">
+                {filteredItems.map((item) => (
+                  <div className="bucket-item" key={item.id}>
+                    <button
+                      className={`bucket-check-btn ${item.done ? "done" : ""}`}
+                      type="button"
+                      onClick={() => toggleItem(item)}
+                      title={item.done ? "Mark incomplete" : "Mark done"}
+                    >
+                      {item.done ? "✓" : ""}
+                    </button>
+
+                    <div>
+                      <div className={`bucket-text ${item.done ? "done" : ""}`}>
+                        {item.text}
+                      </div>
+
+                      <div className="bucket-meta">
+                        {item.done ? "Completed dream" : "Waiting to happen"}
+                      </div>
+                    </div>
+
+                    <button
+                      className="bucket-delete-btn"
+                      type="button"
+                      onClick={() => deleteItem(item)}
+                    >
+                      Erase
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bucket-empty">
+                No {filter === "completed" ? "completed" : "pending"} dreams here yet.
+              </div>
+            )
+          ) : (
+            <div className="bucket-empty">
+              No dreams added yet. Add the first tiny plan ✨
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }

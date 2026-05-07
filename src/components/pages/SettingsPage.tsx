@@ -5,7 +5,7 @@ import { signOut } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { AVATARS, THEME_OPTIONS } from "../../lib/constants";
-import { PetalCanvas } from "../ui/PetalCanvas";
+import { ThemeBackdrop } from "../ui/ThemeBackdrop";
 import type { User, Partner, Bond, ThemeKey } from "../../lib/types";
 import { WeatherLocationSettings } from "../WeatherLocationSettings";
 
@@ -102,7 +102,7 @@ const SETTINGS_CSS = `
 
   .theme-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 14px;
   }
 
@@ -127,16 +127,32 @@ const SETTINGS_CSS = `
     border-color: var(--aurora1);
     background: linear-gradient(
       135deg,
-      rgba(192,132,252,0.18),
-      rgba(251,113,133,0.1)
+      color-mix(in srgb, var(--aurora1) 18%, transparent),
+      color-mix(in srgb, var(--aurora3) 10%, transparent)
     );
+    box-shadow: 0 0 18px color-mix(in srgb, var(--aurora1) 18%, transparent);
   }
 
   .theme-preview {
-    height: 38px;
+    height: 42px;
     border-radius: 14px;
     margin-bottom: 12px;
     border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .theme-preview::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255,255,255,0.16),
+      transparent 42%,
+      rgba(255,255,255,0.06)
+    );
+    pointer-events: none;
   }
 
   .theme-name {
@@ -155,6 +171,22 @@ const SETTINGS_CSS = `
       radial-gradient(circle at 20% 25%, #7dd3fc, transparent 34%),
       radial-gradient(circle at 75% 70%, #fb7185, transparent 36%),
       linear-gradient(135deg, #050816, #0b1026);
+  }
+
+  .theme-preview[data-theme-preview="moonlight"] {
+    background:
+      radial-gradient(circle at 24% 28%, #e0f2fe, transparent 18%),
+      radial-gradient(circle at 72% 26%, #93c5fd, transparent 28%),
+      radial-gradient(circle at 76% 76%, #c4b5fd, transparent 34%),
+      linear-gradient(135deg, #020617, #111827);
+  }
+
+  .theme-preview[data-theme-preview="breeze"] {
+    background:
+      linear-gradient(120deg, transparent 18%, rgba(255,255,255,0.34) 20%, transparent 24%),
+      radial-gradient(circle at 20% 25%, #67e8f9, transparent 34%),
+      radial-gradient(circle at 78% 72%, #bae6fd, transparent 36%),
+      linear-gradient(135deg, #04121c, #083344);
   }
 
   .theme-preview[data-theme-preview="ocean"] {
@@ -197,7 +229,7 @@ const SETTINGS_CSS = `
     min-width: 130px;
     margin: 18px auto 0;
     padding: 16px 24px;
-    background: rgba(192,132,252,0.1);
+    background: color-mix(in srgb, var(--aurora1) 12%, transparent);
     border-radius: 12px;
     border: 1px solid var(--aurora1);
     text-align: center;
@@ -243,7 +275,7 @@ const SETTINGS_CSS = `
   .small-settings-btn:hover {
     border-color: var(--aurora1);
     color: var(--aurora1);
-    box-shadow: 0 0 14px rgba(192,132,252,0.25);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--aurora1) 25%, transparent);
     transform: translateY(-1px);
   }
 
@@ -296,6 +328,12 @@ const SETTINGS_CSS = `
   .settings-save-wrap .save-btn {
     max-width: 300px;
     width: 100%;
+  }
+
+  @media (max-width: 900px) {
+    .theme-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   @media (max-width: 760px) {
@@ -555,7 +593,7 @@ export function SettingsPage({
 
       <div className="page">
         <div className="aurora-bg" />
-        <PetalCanvas />
+        <ThemeBackdrop />
 
         <div className="inner-wrap">
           <div className="page-title">
@@ -655,7 +693,7 @@ export function SettingsPage({
                       style={{
                         fontFamily: "var(--font-serif)",
                         fontSize: 22,
-                        color: "var(--aurora1)",
+                        color: "var(--counter1)",
                       }}
                     >
                       {daysToGo}
@@ -700,11 +738,7 @@ export function SettingsPage({
           </div>
 
           <div className="settings-save-wrap">
-            <button
-              className="save-btn"
-              type="button"
-              onClick={save}
-            >
+            <button className="save-btn" type="button" onClick={save}>
               {saved ? (
                 <span className="save-success">✓ Saved!</span>
               ) : (
