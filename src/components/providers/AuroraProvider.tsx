@@ -41,6 +41,7 @@ interface AuroraContextValue {
     reunionDate: string;
     setReunionDate: (date: string) => void;
     hasUnreadChat: boolean;
+    loading: boolean;
     goTo: (page: PageKey, mode?: NavigateMode) => void;
 }
 
@@ -87,6 +88,7 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
     const [bond, setBond] = useState<Bond | null>(null);
     const [reunionDate, setReunionDate] = useState("");
     const [hasUnreadChat, setHasUnreadChat] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const lastSeenMessageIdRef = useRef<string | null>(null);
     const pathnameRef = useRef(pathname);
@@ -150,6 +152,8 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
         };
 
         const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            setLoading(true);
+
             if (!firebaseUser) {
                 unsubUser?.();
                 cleanupBondListeners();
@@ -161,6 +165,7 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
                 setBond(null);
                 setReunionDate("");
                 setHasUnreadChat(false);
+                setLoading(false);
 
                 if (!PUBLIC_AUTH_PAGES.includes(pathnameRef.current)) {
                     router.replace("/");
@@ -176,6 +181,13 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
                 doc(db, "users", firebaseUser.uid),
                 (userSnap) => {
                     if (!userSnap.exists()) {
+                        setUser(null);
+                        setPartner(null);
+                        setBond(null);
+                        setReunionDate("");
+                        setHasUnreadChat(false);
+                        setLoading(false);
+
                         if (pathnameRef.current !== "/login") {
                             router.replace("/login");
                         }
@@ -201,6 +213,7 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
                         setBond(null);
                         setPartner(null);
                         setReunionDate("");
+                        setLoading(false);
                         return;
                     }
 
@@ -213,6 +226,7 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
                                 setBond(null);
                                 setPartner(null);
                                 setReunionDate("");
+                                setLoading(false);
                                 return;
                             }
 
@@ -230,6 +244,7 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
                                 unsubPartner?.();
                                 unsubPartner = undefined;
                                 setPartner(null);
+                                setLoading(false);
                                 return;
                             }
 
@@ -240,6 +255,7 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
                                 (partnerSnap) => {
                                     if (!partnerSnap.exists()) {
                                         setPartner(null);
+                                        setLoading(false);
                                         return;
                                     }
 
@@ -247,19 +263,33 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
                                         ...(partnerSnap.data() as Partner),
                                         uid: partnerUid,
                                     });
+
+                                    setLoading(false);
                                 },
                                 (error) => {
                                     console.error("Partner listener error:", error);
+                                    setPartner(null);
+                                    setLoading(false);
                                 }
                             );
                         },
                         (error) => {
                             console.error("Bond listener error:", error);
+                            setBond(null);
+                            setPartner(null);
+                            setReunionDate("");
+                            setLoading(false);
                         }
                     );
                 },
                 (error) => {
                     console.error("User listener error:", error);
+                    setUser(null);
+                    setPartner(null);
+                    setBond(null);
+                    setReunionDate("");
+                    setHasUnreadChat(false);
+                    setLoading(false);
                 }
             );
         });
@@ -395,14 +425,31 @@ export function AuroraProvider({ children }: { children: ReactNode }) {
             reunionDate,
             setReunionDate,
             hasUnreadChat,
+            loading,
             goTo,
         }),
-        [user, partner, bond, reunionDate, hasUnreadChat, goTo]
+        [user, partner, bond, reunionDate, hasUnreadChat, loading, goTo]
     );
 
     return (
         <AuroraContext.Provider value={value}>
-            {children}
+            {loading ? (
+                <div
+                    style={{
+                        minHeight: "100vh",
+                        display: "grid",
+                        placeItems: "center",
+                        background: "var(--bg)",
+                        color: "var(--muted)",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 14,
+                    }}
+                >
+                    Loading AuroraBond...
+                </div>
+            ) : (
+                children
+            )}
         </AuroraContext.Provider>
     );
 }
